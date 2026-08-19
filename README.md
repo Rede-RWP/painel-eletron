@@ -51,18 +51,21 @@ npm install
 ## Rodar em desenvolvimento
 
 ```bash
-# Tela cheia / kiosk (comportamento das lojas)
+# No Mac: janela normal. No Linux da loja: tela cheia / kiosk
 npm start
 
-# Janela normal (melhor para testar no Mac)
+# Forçar kiosk (também no Mac)
+npm run start:kiosk
+
+# Forçar janela (também no Linux)
 npm run start:windowed
 ```
 
-Equivalente: `electron . --no-kiosk` ou variável `PPF_PAINEL_KIOSK=0`.
+No Mac o kiosk cobre a tela inteira e a segunda vez que você dá `npm start` a janela nova fecha na hora (só pode haver um app aberto). Por isso o desenvolvimento no Mac usa janela.
 
 **Sair do kiosk:** `Ctrl+Shift+Q`
 
-Só pode haver **uma instância** do app aberta. Se você iniciar de novo, o Electron foca a janela já existente.
+Se aparecer `PPF Painel já está aberto`, feche o app no Dock (ícone Electron) ou `Ctrl+Shift+Q` e rode de novo.
 
 ---
 

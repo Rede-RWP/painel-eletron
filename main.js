@@ -2,10 +2,19 @@ const { app, BrowserWindow, session, Menu, screen, ipcMain } = require('electron
 const path = require('path');
 const { startAutoUpdate } = require('./updater');
 
-// Kiosk/tela cheia por padrão (totem/PDV). Desligar: --no-kiosk ou PPF_PAINEL_KIOSK=0
-const wantKiosk =
-  !process.argv.includes('--no-kiosk') &&
-  process.env.PPF_PAINEL_KIOSK !== '0';
+// Kiosk/tela cheia: nas lojas (Linux) é o padrão.
+// No Mac (desenvolvimento) abre em janela — kiosk no macOS parece que o app “fechou”
+// e a 2ª execução morre na hora por causa do lock de instância única.
+// Forçar kiosk: --kiosk ou PPF_PAINEL_KIOSK=1. Desligar: --no-kiosk ou PPF_PAINEL_KIOSK=0.
+const wantKiosk = (() => {
+  if (process.argv.includes('--no-kiosk') || process.env.PPF_PAINEL_KIOSK === '0') {
+    return false;
+  }
+  if (process.platform === 'darwin') {
+    return process.argv.includes('--kiosk') || process.env.PPF_PAINEL_KIOSK === '1';
+  }
+  return true;
+})();
 
 // No Debian/KDE (sobretudo Wayland), fullscreen/kiosk do Electron falha com frequência.
 // Forçar backend X11 antes do app ready melhora bastante a confiabilidade.
@@ -146,12 +155,14 @@ function createWindow() {
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
+  console.error('PPF Painel já está aberto. Esta nova janela vai fechar.');
   app.quit();
 } else {
   app.on('second-instance', () => {
     const wins = BrowserWindow.getAllWindows();
     if (wins.length) {
       if (wins[0].isMinimized()) wins[0].restore();
+      if (!wins[0].isVisible()) wins[0].show();
       enforceKiosk(wins[0]);
       wins[0].focus();
     }
