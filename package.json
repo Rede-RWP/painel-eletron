@@ -11,12 +11,12 @@
     "start": "electron .",
     "start:kiosk": "electron . --kiosk",
     "start:windowed": "electron . --no-kiosk",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "dist:linux": "electron-builder --x64 --linux AppImage tar.gz && python3 criar-deb.py",
-    "dist:linux:deb": "electron-builder --x64 --linux dir && python3 criar-deb.py",
-    "dist:linux:arm64": "electron-builder --arm64 --linux AppImage tar.gz",
-    "dist:mac": "electron-builder --mac dir",
+    "pack": "electron-builder --dir --publish never",
+    "dist": "electron-builder --publish never",
+    "dist:linux": "electron-builder --x64 --linux AppImage tar.gz --publish never && python3 criar-deb.py",
+    "dist:linux:deb": "electron-builder --x64 --linux dir --publish never && python3 criar-deb.py",
+    "dist:linux:arm64": "electron-builder --arm64 --linux AppImage tar.gz --publish never",
+    "dist:mac": "electron-builder --mac dir --publish never",
     "publish:github": "bash scripts/publish-github.sh"
   },
   "build": {
