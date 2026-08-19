@@ -7,7 +7,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC="$DIR/dist/linux-unpacked"
 OUT_DIR="$DIR/dist"
 PKG_NAME="ppf-painel-multitask"
-VERSION="1.0.0"
+VERSION="1.1.0"
 ARCH="amd64"
 OUT_DEB="$OUT_DIR/${PKG_NAME}_${VERSION}_${ARCH}.deb"
 
@@ -60,6 +60,11 @@ Categories=Office;Network;
 Keywords=ppf;cardapio;ifood;kiosk;
 EOF
 
+# Auto-update helper (sudo sem senha só para este binário)
+install -m 755 "$DIR/linux/update-helper.sh" "$STAGE/opt/ppf-painel/update-helper"
+mkdir -p "$STAGE/etc/sudoers.d"
+install -m 440 "$DIR/linux/ppf-painel-update.sudoers" "$STAGE/etc/sudoers.d/ppf-painel-update"
+
 INSTALLED_SIZE="$(du -sk "$STAGE/opt" | awk '{print $1}')"
 
 cat > "$STAGE/DEBIAN/control" <<EOF
@@ -70,7 +75,7 @@ Priority: optional
 Architecture: ${ARCH}
 Maintainer: Pizza Pizza Franquias <ti@pizzapizza.com.br>
 Installed-Size: ${INSTALLED_SIZE}
-Depends: libgtk-3-0 | libgtk-3-0t64, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0 | libatspi2.0-0t64, libuuid1, libsecret-1-0, libasound2 | libasound2t64
+Depends: sudo, libgtk-3-0 | libgtk-3-0t64, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0 | libatspi2.0-0t64, libuuid1, libsecret-1-0, libasound2 | libasound2t64
 Recommends: libfuse2 | libfuse2t64
 Homepage: https://www.rederwp.com
 Description: Painel multitask para lojas Pizza Pizza Franquias
@@ -83,6 +88,15 @@ cat > "$STAGE/DEBIAN/postinst" <<'EOF'
 set -e
 if [ -f /opt/ppf-painel/chrome-sandbox ]; then
   chmod 4755 /opt/ppf-painel/chrome-sandbox || true
+fi
+if [ -f /opt/ppf-painel/update-helper ]; then
+  chmod 755 /opt/ppf-painel/update-helper || true
+fi
+if [ -f /etc/sudoers.d/ppf-painel-update ]; then
+  chmod 440 /etc/sudoers.d/ppf-painel-update || true
+  if command -v visudo >/dev/null 2>&1; then
+    visudo -cf /etc/sudoers.d/ppf-painel-update >/dev/null 2>&1 || rm -f /etc/sudoers.d/ppf-painel-update
+  fi
 fi
 update-desktop-database -q /usr/share/applications 2>/dev/null || true
 exit 0

@@ -1,0 +1,4 @@
+# Atualização automática do PPF Painel: só este binário, sem senha.
+# O helper recusa qualquer arquivo que não seja o .deb oficial.
+ALL ALL=(root) NOPASSWD: /opt/ppf-painel/update-helper
+

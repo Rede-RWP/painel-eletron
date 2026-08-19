@@ -177,6 +177,77 @@
                 letter-spacing: 0.02em;
             }
         }
+
+        .home-version {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #8a93a3;
+            letter-spacing: 0.04em;
+        }
+
+        #update-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            background: rgba(11, 15, 20, 0.55);
+            padding: 24px;
+        }
+
+        #update-overlay.visible {
+            display: flex;
+        }
+
+        .update-card {
+            width: min(440px, 100%);
+            background: #1c2430;
+            color: #fff;
+            border-radius: 20px;
+            padding: 28px 26px 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            text-align: center;
+        }
+
+        .update-card h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .update-card p {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #c5ccd6;
+            line-height: 1.45;
+        }
+
+        .update-notes {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #9aa3b0;
+        }
+
+        .update-bar {
+            margin-top: 18px;
+            height: 8px;
+            border-radius: 999px;
+            background: #2d3848;
+            overflow: hidden;
+        }
+
+        .update-bar > span {
+            display: block;
+            height: 100%;
+            width: 0%;
+            background: #2eb8e6;
+            transition: width 0.2s ease;
+        }
+
+        .update-card.success .update-bar > span { background: #22c55e; }
+        .update-card.error .update-bar > span { background: #e84a5f; width: 100%; }
     </style>
 </head>
 <body>
@@ -186,6 +257,7 @@
                 <div id="home-screen">
                     <h1>SISTEMA PIZZA PIZZA FRANQUIAS</h1>
                     <p>Selecione um sistema no menu</p>
+                    <p class="home-version" id="app-version"></p>
                 </div>
             </div>
 
@@ -202,6 +274,15 @@
             <button type="button" onclick="showPage('gestao', this)" class="nav-btn btn-gestao">Gestão</button>
             <button type="button" onclick="showPage('rwp', this)" class="nav-btn btn-rwp">RWP</button>
         </nav>
+
+        <div id="update-overlay" aria-live="polite">
+            <div class="update-card" id="update-card">
+                <h2 id="update-title">Atualização</h2>
+                <p id="update-message"></p>
+                <p class="update-notes" id="update-notes"></p>
+                <div class="update-bar"><span id="update-fill"></span></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -228,6 +309,54 @@
                 }
             }, 300);
         }
+
+        (function setupUpdates() {
+            const overlay = document.getElementById('update-overlay');
+            const card = document.getElementById('update-card');
+            const title = document.getElementById('update-title');
+            const message = document.getElementById('update-message');
+            const notes = document.getElementById('update-notes');
+            const fill = document.getElementById('update-fill');
+            const versionEl = document.getElementById('app-version');
+            let hideTimer;
+
+            if (window.painelUpdates && window.painelUpdates.version) {
+                window.painelUpdates.version().then((v) => {
+                    if (v) versionEl.textContent = 'Versão ' + v;
+                }).catch(() => {});
+            }
+
+            if (!window.painelUpdates || !window.painelUpdates.onStatus) return;
+
+            window.painelUpdates.onStatus((payload) => {
+                clearTimeout(hideTimer);
+                const phase = payload.phase || '';
+                card.classList.remove('success', 'error');
+                overlay.classList.add('visible');
+                notes.textContent = payload.notes || '';
+                message.textContent = payload.message || '';
+                fill.style.width = (payload.percent || 0) + '%';
+
+                if (phase === 'success') {
+                    title.textContent = 'Atualizado com sucesso';
+                    card.classList.add('success');
+                    fill.style.width = '100%';
+                    return;
+                }
+                if (phase === 'error') {
+                    title.textContent = 'Não foi possível atualizar';
+                    card.classList.add('error');
+                    hideTimer = setTimeout(() => overlay.classList.remove('visible'), 8000);
+                    return;
+                }
+                if (phase === 'info') {
+                    title.textContent = 'Nova versão';
+                    hideTimer = setTimeout(() => overlay.classList.remove('visible'), 7000);
+                    return;
+                }
+                title.textContent = 'Atualizando o sistema';
+            });
+        })();
     </script>
 </body>
 </html>

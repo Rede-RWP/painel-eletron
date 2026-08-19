@@ -12,11 +12,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "dist" / "linux-unpacked"
-OUT = ROOT / "dist" / "ppf-painel-multitask_1.0.0_amd64.deb"
+OUT = ROOT / "dist" / "ppf-painel-multitask_1.1.0_amd64.deb"
 STAGE = ROOT / "dist" / "deb-stage-py"
 
 PKG = "ppf-painel-multitask"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 ARCH = "amd64"
 
 
@@ -73,6 +73,20 @@ def copy_app() -> None:
         encoding="utf-8",
     )
 
+    helper_src = ROOT / "linux" / "update-helper.sh"
+    helper_dst = opt / "update-helper"
+    shutil.copy2(helper_src, helper_dst)
+    helper_dst.chmod(0o755)
+
+    sudoers_dir = STAGE / "etc" / "sudoers.d"
+    sudoers_dir.mkdir(parents=True)
+    sudoers_dst = sudoers_dir / "ppf-painel-update"
+    sudoers_dst.write_text(
+        (ROOT / "linux" / "ppf-painel-update.sudoers").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    sudoers_dst.chmod(0o440)
+
 
 def write_control(installed_kb: int) -> Path:
     debain = STAGE / "DEBIAN"
@@ -88,7 +102,7 @@ def write_control(installed_kb: int) -> Path:
                 f"Architecture: {ARCH}",
                 "Maintainer: Pizza Pizza Franquias <ti@pizzapizza.com.br>",
                 f"Installed-Size: {installed_kb}",
-                "Depends: libgtk-3-0 | libgtk-3-0t64, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0 | libatspi2.0-0t64, libuuid1, libsecret-1-0, libasound2 | libasound2t64",
+                "Depends: sudo, libgtk-3-0 | libgtk-3-0t64, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0 | libatspi2.0-0t64, libuuid1, libsecret-1-0, libasound2 | libasound2t64",
                 "Homepage: https://www.rederwp.com",
                 "Description: Painel multitask para lojas Pizza Pizza Franquias",
                 " Abre Cardápio Web, iFood, Gestão e RWP em tela cheia (kiosk).",
@@ -105,6 +119,15 @@ def write_control(installed_kb: int) -> Path:
         "set -e\n"
         "if [ -f /opt/ppf-painel/chrome-sandbox ]; then\n"
         "  chmod 4755 /opt/ppf-painel/chrome-sandbox || true\n"
+        "fi\n"
+        "if [ -f /opt/ppf-painel/update-helper ]; then\n"
+        "  chmod 755 /opt/ppf-painel/update-helper || true\n"
+        "fi\n"
+        "if [ -f /etc/sudoers.d/ppf-painel-update ]; then\n"
+        "  chmod 440 /etc/sudoers.d/ppf-painel-update || true\n"
+        "  if command -v visudo >/dev/null 2>&1; then\n"
+        "    visudo -cf /etc/sudoers.d/ppf-painel-update >/dev/null 2>&1 || rm -f /etc/sudoers.d/ppf-painel-update\n"
+        "  fi\n"
         "fi\n"
         "update-desktop-database -q /usr/share/applications 2>/dev/null || true\n"
         "exit 0\n",

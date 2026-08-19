@@ -1,5 +1,6 @@
-const { app, BrowserWindow, session, Menu, screen } = require('electron');
+const { app, BrowserWindow, session, Menu, screen, ipcMain } = require('electron');
 const path = require('path');
+const { startAutoUpdate } = require('./updater');
 
 // Kiosk/tela cheia por padrão (totem/PDV). Desligar: --no-kiosk ou PPF_PAINEL_KIOSK=0
 const wantKiosk =
@@ -107,6 +108,10 @@ function createWindow() {
   Menu.setApplicationMenu(null);
   win.loadFile(path.join(__dirname, 'painel.html'));
 
+  win.webContents.once('did-finish-load', () => {
+    startAutoUpdate(win);
+  });
+
   win.once('ready-to-show', () => {
     enforceKiosk(win);
     win.show();
@@ -153,6 +158,7 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    ipcMain.handle('app-version', () => app.getVersion());
     attachFrameBypass();
     createWindow();
 
