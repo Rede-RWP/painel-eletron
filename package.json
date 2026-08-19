@@ -1,0 +1,58 @@
+{
+  "name": "ppf-painel-multitask",
+  "version": "1.0.0",
+  "description": "Painel multitask PPF (Cardápio Web, iFood, Gestão, RWP) em tela cheia/kiosk no Linux",
+  "homepage": "https://www.rederwp.com",
+  "main": "main.js",
+  "author": "Pizza Pizza Franquias <ti@pizzapizza.com.br>",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "start:kiosk": "electron .",
+    "start:windowed": "electron . --no-kiosk",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:linux": "electron-builder --x64 --linux AppImage tar.gz && python3 criar-deb.py",
+    "dist:linux:deb": "electron-builder --x64 --linux dir && python3 criar-deb.py",
+    "dist:linux:arm64": "electron-builder --arm64 --linux AppImage tar.gz",
+    "dist:mac": "electron-builder --mac dir"
+  },
+  "build": {
+    "appId": "com.pizzapizza.painel",
+    "productName": "PPF Painel Multitask",
+    "copyright": "Copyright © Pizza Pizza Franquias",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "painel.html",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Office",
+      "executableName": "ppf-painel",
+      "maintainer": "Pizza Pizza Franquias <ti@pizzapizza.com.br>",
+      "synopsis": "Painel multitask para lojas PPF",
+      "description": "Abre Cardápio Web, iFood, Gestão e RWP em um único painel kiosk."
+    },
+    "deb": {
+      "depends": []
+    },
+    "mac": {
+      "target": ["dir"],
+      "category": "public.app-category.business"
+    }
+  },
+  "devDependencies": {
+    "electron": "^35.1.2",
+    "electron-builder": "^25.1.8"
+  }
+}
