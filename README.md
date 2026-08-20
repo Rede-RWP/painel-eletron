@@ -402,4 +402,4 @@ sudo apt-get install -f -y
 | Loja não atualiza sozinha | Conferir se já é 1.1.0+; se o repo/Release é público; se a tag `v*` é maior que a versão local |
 | Overlay de erro no sudo | O helper/`sudoers` só entra no `.deb` desta versão; reinstale o 1.1.0 uma vez |
 | GitHub 404 | Repo privado ou ainda não existe Release; o app falha quieto e tenta em 4 h |
-| Linux trava / congela o SO | Atualize para 1.1.2+ (descarrega iframes inativos). Evite abrir as 4 abas sem trocar. PDV com ≤4 GB RAM: use só as abas necessárias |
+| Linux trava / congela o SO | As abas ficam carregadas de propósito (não perde login). Se travar, teste com `--no-kiosk` e olhe RAM (`free -h`) |

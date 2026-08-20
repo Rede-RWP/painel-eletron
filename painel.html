@@ -65,11 +65,6 @@
             z-index: 10;
         }
 
-        /* Iframe oculto não deve consumir GPU/compositor */
-        iframe.page-frame:not(.active) {
-            visibility: hidden;
-        }
-
         #home-screen {
             display: flex;
             flex-direction: column;
@@ -300,24 +295,7 @@
     </div>
 
     <script>
-        let activePageId = 'home';
-
-        /** Descarrega iframes inativos — cada SPA = processo Chromium separado. */
-        function unloadInactiveIframes(activeId) {
-            document.querySelectorAll('iframe.page-frame').forEach((frame) => {
-                const pageId = frame.id.replace('iframe-', '');
-                if (pageId === activeId) return;
-                if (frame.src && frame.src !== 'about:blank') {
-                    frame.src = 'about:blank';
-                }
-            });
-        }
-
         function showPage(id, btn) {
-            if (id === activePageId) return;
-
-            unloadInactiveIframes(id);
-
             document.querySelectorAll('.page-frame').forEach(f => f.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -327,24 +305,17 @@
 
             targetFrame.classList.add('active');
             btn.classList.add('active');
-            activePageId = id;
 
-            if (id !== 'home') {
-                const url = targetFrame.getAttribute('data-src');
-                if (url && (!targetFrame.src || targetFrame.src === 'about:blank')) {
-                    targetFrame.src = url;
-                }
+            // Carrega uma vez e mantém (login, carrinho, sessão). Não recarrega ao voltar.
+            if (id !== 'home' && !targetFrame.getAttribute('src')) {
+                targetFrame.src = targetFrame.getAttribute('data-src');
             }
 
             setTimeout(() => {
                 if (id !== 'home') {
-                    try {
-                        targetFrame.contentWindow
-                            ? targetFrame.contentWindow.focus()
-                            : targetFrame.focus();
-                    } catch (_) {
-                        targetFrame.focus();
-                    }
+                    targetFrame.contentWindow
+                        ? targetFrame.contentWindow.focus()
+                        : targetFrame.focus();
                 }
             }, 300);
         }
