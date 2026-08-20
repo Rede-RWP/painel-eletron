@@ -65,6 +65,11 @@
             z-index: 10;
         }
 
+        /* Iframe oculto não deve consumir GPU/compositor */
+        iframe.page-frame:not(.active) {
+            visibility: hidden;
+        }
+
         #home-screen {
             display: flex;
             flex-direction: column;
@@ -295,7 +300,24 @@
     </div>
 
     <script>
+        let activePageId = 'home';
+
+        /** Descarrega iframes inativos — cada SPA = processo Chromium separado. */
+        function unloadInactiveIframes(activeId) {
+            document.querySelectorAll('iframe.page-frame').forEach((frame) => {
+                const pageId = frame.id.replace('iframe-', '');
+                if (pageId === activeId) return;
+                if (frame.src && frame.src !== 'about:blank') {
+                    frame.src = 'about:blank';
+                }
+            });
+        }
+
         function showPage(id, btn) {
+            if (id === activePageId) return;
+
+            unloadInactiveIframes(id);
+
             document.querySelectorAll('.page-frame').forEach(f => f.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -305,16 +327,24 @@
 
             targetFrame.classList.add('active');
             btn.classList.add('active');
+            activePageId = id;
 
-            if (id !== 'home' && !targetFrame.src) {
-                targetFrame.src = targetFrame.getAttribute('data-src');
+            if (id !== 'home') {
+                const url = targetFrame.getAttribute('data-src');
+                if (url && (!targetFrame.src || targetFrame.src === 'about:blank')) {
+                    targetFrame.src = url;
+                }
             }
 
             setTimeout(() => {
                 if (id !== 'home') {
-                    targetFrame.contentWindow
-                        ? targetFrame.contentWindow.focus()
-                        : targetFrame.focus();
+                    try {
+                        targetFrame.contentWindow
+                            ? targetFrame.contentWindow.focus()
+                            : targetFrame.focus();
+                    } catch (_) {
+                        targetFrame.focus();
+                    }
                 }
             }, 300);
         }

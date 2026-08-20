@@ -3,8 +3,7 @@ const path = require('path');
 const { startAutoUpdate } = require('./updater');
 
 // Kiosk/tela cheia: nas lojas (Linux) é o padrão.
-// No Mac (desenvolvimento) abre em janela — kiosk no macOS parece que o app “fechou”
-// e a 2ª execução morre na hora por causa do lock de instância única.
+// No Mac (desenvolvimento) abre em janela.
 // Forçar kiosk: --kiosk ou PPF_PAINEL_KIOSK=1. Desligar: --no-kiosk ou PPF_PAINEL_KIOSK=0.
 const wantKiosk = (() => {
   if (process.argv.includes('--no-kiosk') || process.env.PPF_PAINEL_KIOSK === '0') {
@@ -16,74 +15,123 @@ const wantKiosk = (() => {
   return true;
 })();
 
-// No Debian/KDE (sobretudo Wayland), fullscreen/kiosk do Electron falha com frequência.
-// Forçar backend X11 antes do app ready melhora bastante a confiabilidade.
-if (process.platform === 'linux' && wantKiosk) {
-  app.commandLine.appendSwitch('ozone-platform-hint', 'x11');
-  app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform');
-  app.commandLine.appendSwitch('ozone-platform', 'x11');
+if (process.platform === 'linux') {
+  // Evita crash/travamento quando /dev/shm é pequeno (comum em PDV).
+  app.commandLine.appendSwitch('disable-dev-shm-usage');
+  if (wantKiosk) {
+    app.commandLine.appendSwitch('ozone-platform-hint', 'x11');
+    app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform');
+    app.commandLine.appendSwitch('ozone-platform', 'x11');
+  }
 }
 
-/** Remove headers que impedem o Cardápio Web (e similares) de abrir em iframe. */
+const FRAME_HOSTS = [
+  'portal.cardapioweb.com',
+  'gestordepedidos.ifood.com.br',
+  'portal.ifood.com.br',
+  'www.rederwp.com',
+  'rederwp.com',
+];
+
+function hostNeedsFrameBypass(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return FRAME_HOSTS.some((h) => host === h.replace(/^www\./, '') || host.endsWith('.' + h));
+  } catch (_) {
+    return false;
+  }
+}
+
+/** Remove headers que impedem sites embutidos — só nos domínios do painel. */
 function attachFrameBypass() {
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    const headers = { ...details.responseHeaders };
-
-    for (const key of Object.keys(headers)) {
-      const lower = key.toLowerCase();
-
-      if (lower === 'x-frame-options') {
-        delete headers[key];
-        continue;
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['https://*/*', 'http://*/*'] },
+    (details, callback) => {
+      if (
+        details.resourceType !== 'subFrame' &&
+        details.resourceType !== 'mainFrame'
+      ) {
+        callback({ responseHeaders: details.responseHeaders });
+        return;
+      }
+      if (!hostNeedsFrameBypass(details.url)) {
+        callback({ responseHeaders: details.responseHeaders });
+        return;
       }
 
-      if (
-        lower === 'content-security-policy' ||
-        lower === 'content-security-policy-report-only'
-      ) {
-        headers[key] = headers[key].map((value) =>
-          String(value)
-            .replace(/frame-ancestors[^;]*;?/gi, '')
-            .replace(/;\s*;/g, ';')
-            .replace(/^\s*;\s*/g, '')
-            .replace(/;\s*$/g, '')
-            .trim()
-        );
-        // Se a CSP ficou vazia, remove o header
-        if (!headers[key].some((v) => v.length > 0)) {
+      const headers = { ...details.responseHeaders };
+      for (const key of Object.keys(headers)) {
+        const lower = key.toLowerCase();
+        if (lower === 'x-frame-options') {
           delete headers[key];
+          continue;
+        }
+        if (
+          lower === 'content-security-policy' ||
+          lower === 'content-security-policy-report-only'
+        ) {
+          headers[key] = headers[key].map((value) =>
+            String(value)
+              .replace(/frame-ancestors[^;]*;?/gi, '')
+              .replace(/;\s*;/g, ';')
+              .replace(/^\s*;\s*/g, '')
+              .replace(/;\s*$/g, '')
+              .trim()
+          );
+          if (!headers[key].some((v) => v.length > 0)) {
+            delete headers[key];
+          }
         }
       }
+      callback({ responseHeaders: headers });
     }
-
-    callback({ responseHeaders: headers });
-  });
+  );
 }
 
 function primaryBounds() {
-  const display = screen.getPrimaryDisplay();
-  return display.bounds;
+  return screen.getPrimaryDisplay().bounds;
 }
 
-/** Aplica/reaplica kiosk — o KWin às vezes ignora a 1ª chamada. */
-function enforceKiosk(win) {
+let lastKioskEnforce = 0;
+let kioskStartupRetries = 0;
+
+/** Aplica kiosk com debounce — evita loop infinito com KWin/Plasma. */
+function enforceKiosk(win, { force = false } = {}) {
   if (!wantKiosk || win.isDestroyed()) return;
 
+  const now = Date.now();
+  if (!force && now - lastKioskEnforce < 3000) return;
+  if (!force && win.isFullScreen() && win.isKiosk()) return;
+
+  lastKioskEnforce = now;
   const b = primaryBounds();
   try {
     win.setMenuBarVisibility(false);
     win.setAutoHideMenuBar(true);
-    // Cobre o painel do Plasma enquanto o app estiver ativo
-    win.setAlwaysOnTop(true, 'screen-saver');
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     win.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height });
-    win.maximize();
-    win.setFullScreen(true);
-    win.setKiosk(true);
+    if (!win.isMaximized()) win.maximize();
+    if (!win.isFullScreen()) win.setFullScreen(true);
+    if (!win.isKiosk()) win.setKiosk(true);
     win.focus();
   } catch (_) {
-    // ignore race com destroy
+    // race com destroy
   }
+}
+
+function scheduleKioskStartup(win) {
+  if (!wantKiosk || process.platform !== 'linux') return;
+  const delays = [200, 800, 2000];
+  delays.forEach((ms) => {
+    setTimeout(() => {
+      if (win.isDestroyed() || kioskStartupRetries >= 3) return;
+      if (win.isFullScreen() && win.isKiosk()) {
+        kioskStartupRetries = 3;
+        return;
+      }
+      kioskStartupRetries += 1;
+      enforceKiosk(win, { force: true });
+    }, ms);
+  });
 }
 
 function createWindow() {
@@ -109,7 +157,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
-      // Necessário para áudio/notificações dos portais embutidos
+      backgroundThrottling: true,
       autoplayPolicy: 'no-user-gesture-required',
     },
   });
@@ -122,26 +170,14 @@ function createWindow() {
   });
 
   win.once('ready-to-show', () => {
-    enforceKiosk(win);
+    enforceKiosk(win, { force: true });
     win.show();
-    enforceKiosk(win);
-    // Retentativas: KDE/KWin costuma aplicar fullscreen só depois do map da janela
-    if (wantKiosk && process.platform === 'linux') {
-      [200, 600, 1500].forEach((ms) => setTimeout(() => enforceKiosk(win), ms));
-    }
+    scheduleKioskStartup(win);
   });
 
-  if (wantKiosk) {
-    win.on('leave-full-screen', () => {
-      setTimeout(() => enforceKiosk(win), 50);
-    });
-    win.on('unmaximize', () => {
-      setTimeout(() => enforceKiosk(win), 50);
-    });
-  }
+  // Não reagir a leave-full-screen/unmaximize — isso gerava loop com KWin e travava o SO.
 
-  // Atalho de saída do kiosk: Ctrl+Shift+Q
-  win.webContents.on('before-input-event', (event, input) => {
+  win.webContents.on('before-input-event', (_event, input) => {
     if (
       input.type === 'keyDown' &&
       input.control &&
@@ -161,10 +197,11 @@ if (!gotLock) {
   app.on('second-instance', () => {
     const wins = BrowserWindow.getAllWindows();
     if (wins.length) {
-      if (wins[0].isMinimized()) wins[0].restore();
-      if (!wins[0].isVisible()) wins[0].show();
-      enforceKiosk(wins[0]);
-      wins[0].focus();
+      const win = wins[0];
+      if (win.isMinimized()) win.restore();
+      if (!win.isVisible()) win.show();
+      enforceKiosk(win, { force: true });
+      win.focus();
     }
   });
 
