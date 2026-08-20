@@ -47,27 +47,13 @@
             width: 100%;
             height: 100%;
             border: none;
-            display: block;
-            opacity: 0;
-            pointer-events: none;
+            display: none;
             z-index: 1;
-            transition: opacity 0.25s ease;
-        }
-
-        iframe.page-frame {
-            min-width: 100%;
-            min-height: 100%;
         }
 
         .page-frame.active {
-            opacity: 1;
-            pointer-events: auto;
+            display: block;
             z-index: 10;
-        }
-
-        /* Iframe oculto não deve consumir GPU/compositor */
-        iframe.page-frame:not(.active) {
-            visibility: hidden;
         }
 
         #home-screen {
@@ -274,11 +260,7 @@
                     <p class="home-version" id="app-version"></p>
                 </div>
             </div>
-
-            <iframe id="iframe-cardweb" class="page-frame" allow="autoplay; clipboard-read; clipboard-write" data-src="https://portal.cardapioweb.com"></iframe>
-            <iframe id="iframe-ifood" class="page-frame" allow="autoplay; clipboard-read; clipboard-write" data-src="https://gestordepedidos.ifood.com.br/#/login"></iframe>
-            <iframe id="iframe-gestao" class="page-frame" allow="autoplay; clipboard-read; clipboard-write" data-src="https://portal.ifood.com.br"></iframe>
-            <iframe id="iframe-rwp" class="page-frame" allow="autoplay; clipboard-read; clipboard-write" data-src="https://www.rederwp.com/src/login.php"></iframe>
+            <!-- Sites externos rodam em BrowserView (main.js) — reCAPTCHA do CW precisa de top-level -->
         </main>
 
         <nav class="dock" aria-label="Navegação principal">
@@ -302,59 +284,17 @@
     <script>
         let activePageId = 'home';
 
-        /** Abas que mantêm sessão (login). As outras descarregam para aliviar RAM no PDV. */
-        const KEEP_SESSION = new Set(['cardweb']);
-
-        /** Descarrega iframes inativos — exceto Cardápio Web (sessão/login). */
-        function unloadInactiveIframes(activeId) {
-            document.querySelectorAll('iframe.page-frame').forEach((frame) => {
-                const pageId = frame.id.replace('iframe-', '');
-                if (pageId === activeId || KEEP_SESSION.has(pageId)) return;
-                if (frame.dataset.loaded === '1') {
-                    frame.src = 'about:blank';
-                    frame.dataset.loaded = '0';
-                }
-            });
-        }
-
         function showPage(id, btn) {
             if (id === activePageId) return;
 
-            unloadInactiveIframes(id);
-
-            document.querySelectorAll('.page-frame').forEach(f => f.classList.remove('active'));
+            document.getElementById('home').classList.toggle('active', id === 'home');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-
-            const targetFrame = (id === 'home')
-                ? document.getElementById('home')
-                : document.getElementById('iframe-' + id);
-
-            if (!targetFrame) return;
-
-            targetFrame.classList.add('active');
             btn.classList.add('active');
             activePageId = id;
 
-            // data-src + dataset.loaded: getAttribute('src') / .src mentem após about:blank.
-            if (id !== 'home' && targetFrame.dataset.loaded !== '1') {
-                const url = targetFrame.getAttribute('data-src');
-                if (url) {
-                    targetFrame.src = url;
-                    targetFrame.dataset.loaded = '1';
-                }
+            if (window.painelNav && window.painelNav.showPage) {
+                window.painelNav.showPage(id).catch(() => {});
             }
-
-            setTimeout(() => {
-                if (id !== 'home') {
-                    try {
-                        targetFrame.contentWindow
-                            ? targetFrame.contentWindow.focus()
-                            : targetFrame.focus();
-                    } catch (_) {
-                        targetFrame.focus();
-                    }
-                }
-            }, 300);
         }
 
         (function setupUpdates() {
@@ -366,6 +306,13 @@
             const fill = document.getElementById('update-fill');
             const versionEl = document.getElementById('app-version');
             let hideTimer;
+
+            function setOverlay(visible) {
+                overlay.classList.toggle('visible', visible);
+                if (window.painelNav && window.painelNav.setOverlay) {
+                    window.painelNav.setOverlay(visible).catch(() => {});
+                }
+            }
 
             if (window.painelUpdates && window.painelUpdates.version) {
                 window.painelUpdates.version().then((v) => {
@@ -379,7 +326,7 @@
                 clearTimeout(hideTimer);
                 const phase = payload.phase || '';
                 card.classList.remove('success', 'error');
-                overlay.classList.add('visible');
+                setOverlay(true);
                 notes.textContent = payload.notes || '';
                 message.textContent = payload.message || '';
                 fill.style.width = (payload.percent || 0) + '%';
@@ -393,12 +340,12 @@
                 if (phase === 'error') {
                     title.textContent = 'Não foi possível atualizar';
                     card.classList.add('error');
-                    hideTimer = setTimeout(() => overlay.classList.remove('visible'), 8000);
+                    hideTimer = setTimeout(() => setOverlay(false), 8000);
                     return;
                 }
                 if (phase === 'info') {
                     title.textContent = 'Nova versão';
-                    hideTimer = setTimeout(() => overlay.classList.remove('visible'), 7000);
+                    hideTimer = setTimeout(() => setOverlay(false), 7000);
                     return;
                 }
                 title.textContent = 'Atualizando o sistema';

@@ -18,9 +18,10 @@ Sistemas atuais:
 
 | Arquivo | Função |
 |---------|--------|
-| `main.js` | Processo principal do Electron: janela, kiosk, cookies de terceiros para iframes |
-| `frame-policy.js` | Bypass de `X-Frame-Options` / CSP (`*.cardapioweb.com`, iFood, RWP) |
-| `painel.html` | Interface: iframes das páginas + botões do dock. **É aqui que se adiciona página nova** |
+| `main.js` | Processo principal: janela, kiosk, **BrowserView** das abas (Cardápio top-level p/ reCAPTCHA) |
+| `pages-config.js` | URLs das abas + `keepAlive` (Cardápio mantém sessão) |
+| `frame-policy.js` | Bypass de `X-Frame-Options` / CSP + allowlist de popups do captcha |
+| `painel.html` | Dock + tela Início. Sites externos **não** usam iframe (vão em BrowserView) |
 | `preload.js` | Isolamento de segurança (não precisa alterar no uso normal) |
 | `package.json` | Nome, **versão**, scripts de start/build, lista de arquivos empacotados |
 | `criar-deb.py` | Gera o `.deb` Debian a partir de `dist/linux-unpacked` (funciona no Mac) |
@@ -75,13 +76,13 @@ Se aparecer `PPF Painel já está aberto`, feche o app no Dock (ícone Electron)
 
 ## Como adicionar uma página nova
 
-Todas as páginas (exceto Início) são **iframes** dentro de `painel.html`. O carregamento é preguiçoso: a URL só vai para `src` na primeira vez que o botão é clicado (`data-src`).
+Sites externos abrem em **BrowserView** (documento top-level). Isso é obrigatório para o Cardápio Web: o **reCAPTCHA** quebra dentro de iframe e deixa a tela branca.
 
-Use um **id curto**, só letras minúsculas, sem espaços (ex.: `rappi`, `whatsapp`, `nfe`). Esse id aparece em três lugares e precisa ser **igual**.
+Use um **id curto**, só letras minúsculas (ex.: `rappi`). O mesmo id entra em `pages-config.js` e no botão do dock.
 
 ### Passo 1 — Cor da aba (opcional)
 
-No `<style>` de `painel.html`, nas variáveis `:root`, adicione uma cor:
+No `<style>` de `painel.html`, nas variáveis `:root`:
 
 ```css
 :root {
@@ -90,56 +91,32 @@ No `<style>` de `painel.html`, nas variáveis `:root`, adicione uma cor:
 }
 ```
 
-E uma classe para o botão (junto das outras `.btn-*`):
-
 ```css
 .btn-rappi { background: var(--btn-rappi); }
 ```
 
-Se não fizer isso, o botão fica com a cor cinza do Início.
+### Passo 2 — URL em `pages-config.js`
 
-### Passo 2 — Iframe
-
-Dentro de `<main class="main-container">`, depois dos iframes existentes, acrescente:
-
-```html
-<iframe
-    id="iframe-rappi"
-    class="page-frame"
-    allow="autoplay; clipboard-read; clipboard-write"
-    data-src="https://exemplo.com/login">
-</iframe>
+```js
+rappi: {
+  url: 'https://exemplo.com/login',
+  keepAlive: false, // true = mantém sessão ao trocar de aba
+},
 ```
 
-Regras:
-
-- `id` **obrigatório** no formato `iframe-` + o id da página (`iframe-rappi`)
-- Use `data-src` (não `src`) para não carregar o site até o usuário clicar
-- `class="page-frame"` é obrigatório (o JS esconde/mostra por essa classe)
-
-### Passo 3 — Botão no dock
-
-Dentro de `<nav class="dock">`, acrescente um botão:
+### Passo 3 — Botão no dock (`painel.html`)
 
 ```html
 <button type="button" onclick="showPage('rappi', this)" class="nav-btn btn-rappi">Rappi</button>
 ```
 
-O primeiro argumento de `showPage` deve ser **o mesmo id** (`rappi`), sem o prefixo `iframe-`.
-
 ### Passo 4 — Conferir
 
-Não é preciso alterar `showPage()` em `painel.html`, nem `main.js`, na maioria dos casos.
-
-1. Rode `npm run start:windowed`
+1. `npm run start:windowed`
 2. Clique no botão novo
-3. Confirme que o site abre no iframe
+3. Confirme que o site abre **acima** do dock (área superior)
 
-Se a página aparecer **em branco**:
-
-- O site pode bloquear iframe (`X-Frame-Options` / CSP). O `main.js` já remove esses headers no Electron; isso **não funciona** se você abrir o `painel.html` só no Chrome.
-- Confira se o `id` do iframe é `iframe-` + o nome passado no `showPage`.
-- Confira se a URL está em `data-src` (com `https://`).
+Se a página ficar **em branco no captcha**: confirme que está na 1.1.6+ (BrowserView + popups Google). Não use iframe para sites com reCAPTCHA.
 
 ### Passo 5 — Arquivos extras (só se criar arquivos novos)
 
@@ -149,6 +126,7 @@ O build só empacota o que está em `package.json` → `build.files`:
 "files": [
   "main.js",
   "frame-policy.js",
+  "pages-config.js",
   "updater.js",
   "preload.js",
   "painel.html",
@@ -157,9 +135,7 @@ O build só empacota o que está em `package.json` → `build.files`:
 ]
 ```
 
-Se você criar, por exemplo, `logo.png` ou `paginas/foo.html` e referenciar no HTML, **adicione o caminho nessa lista**. Caso contrário o app empacotado não inclui o arquivo.
-
-Não é necessário incluir a nova página nessa lista se ela for só um iframe para um site externo.
+Se você criar, por exemplo, `logo.png` e referenciar no HTML, **adicione o caminho nessa lista**.
 
 ---
 
@@ -400,7 +376,7 @@ sudo apt-get install -f -y
 
 | Problema | O que fazer |
 |----------|-------------|
-| Página em branco no iframe | Testar no app Electron, não no navegador; conferir `id` / `data-src` |
+| Página em branco / captcha some | Atualize para **1.1.6+** (BrowserView top-level + popups Google). Não use iframe no Cardápio |
 | `.deb` minúsculo no Mac | Ignorar o `.deb` do builder; usar `criar-deb.py` |
 | `Não achei dist/linux-unpacked/ppf-painel` | Rodar `npm run dist:linux` antes do Python |
 | Kiosk não cobre a tela no KDE | Manter o launcher padrão (X11); não forçar Wayland |
@@ -409,5 +385,5 @@ sudo apt-get install -f -y
 | Loja não atualiza sozinha | Conferir se já é 1.1.0+; se o repo/Release é público; se a tag `v*` é maior que a versão local |
 | Overlay de erro no sudo | O helper/`sudoers` só entra no `.deb` desta versão; reinstale o 1.1.0 uma vez |
 | GitHub 404 | Repo privado ou ainda não existe Release; o app falha quieto e tenta em 4 h |
-| Linux trava / congela o SO | Atualize para 1.1.5+ (descarrega iFood/Gestão/RWP inativos; Cardápio mantém sessão). PDV com ≤4 GB RAM: use só as abas necessárias |
-| Cardápio Web em branco | 1.1.5+ bypassa `*.cardapioweb.com` e libera storage de terceiros no iframe. Confirme que `frame-policy.js` está no pacote |
+| Linux trava / congela o SO | 1.1.6+ descarrega iFood/Gestão/RWP ao sair; Cardápio mantém sessão. PDV com ≤4 GB: abra só o necessário |
+| Dock some atrás do site | Ajuste `DOCK_RESERVE` em `pages-config.js` (altura reservada na base) |

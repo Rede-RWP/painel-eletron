@@ -7,7 +7,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC="$DIR/dist/linux-unpacked"
 OUT_DIR="$DIR/dist"
 PKG_NAME="ppf-painel-multitask"
-VERSION="1.1.5"
+VERSION="1.1.6"
 ARCH="amd64"
 OUT_DEB="$OUT_DIR/${PKG_NAME}_${VERSION}_${ARCH}.deb"
 

@@ -6,3 +6,8 @@ contextBridge.exposeInMainWorld('painelUpdates', {
     ipcRenderer.on('update-status', (_event, payload) => callback(payload));
   },
 });
+
+contextBridge.exposeInMainWorld('painelNav', {
+  showPage: (id) => ipcRenderer.invoke('nav-show-page', id),
+  setOverlay: (visible) => ipcRenderer.invoke('nav-set-overlay', visible),
+});

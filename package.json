@@ -1,6 +1,6 @@
 {
   "name": "ppf-painel-multitask",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Painel multitask PPF (Cardápio Web, iFood, Gestão, RWP) em tela cheia/kiosk no Linux",
   "homepage": "https://www.rederwp.com",
   "main": "main.js",
@@ -31,6 +31,7 @@
     "files": [
       "main.js",
       "frame-policy.js",
+      "pages-config.js",
       "updater.js",
       "preload.js",
       "painel.html",
