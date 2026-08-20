@@ -25,32 +25,25 @@ if (process.platform === 'linux') {
   }
 }
 
-const FRAME_HOSTS = [
-  'portal.cardapioweb.com',
-  'gestordepedidos.ifood.com.br',
-  'portal.ifood.com.br',
-  'www.rederwp.com',
-  'rederwp.com',
-];
+const FRAME_SUFFIXES = ['cardapioweb.com', 'ifood.com.br', 'rederwp.com'];
 
 function hostNeedsFrameBypass(url) {
   try {
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return FRAME_HOSTS.some((h) => host === h.replace(/^www\./, '') || host.endsWith('.' + h));
+    const host = new URL(url).hostname.toLowerCase();
+    return FRAME_SUFFIXES.some(
+      (suffix) => host === suffix || host.endsWith('.' + suffix)
+    );
   } catch (_) {
     return false;
   }
 }
 
-/** Remove headers que impedem sites embutidos — só nos domínios do painel. */
+/** Remove X-Frame-Options / frame-ancestors nos iframes dos sites parceiros. */
 function attachFrameBypass() {
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['https://*/*', 'http://*/*'] },
     (details, callback) => {
-      if (
-        details.resourceType !== 'subFrame' &&
-        details.resourceType !== 'mainFrame'
-      ) {
+      if (details.resourceType !== 'subFrame') {
         callback({ responseHeaders: details.responseHeaders });
         return;
       }

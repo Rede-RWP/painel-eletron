@@ -306,9 +306,10 @@
             targetFrame.classList.add('active');
             btn.classList.add('active');
 
-            // Carrega uma vez e mantém (login, carrinho, sessão). Não recarrega ao voltar.
-            if (id !== 'home' && !targetFrame.getAttribute('src')) {
+            // Carrega uma vez e mantém sessão (getAttribute('src') falha quando src vem do JS).
+            if (id !== 'home' && targetFrame.dataset.loaded !== '1') {
                 targetFrame.src = targetFrame.getAttribute('data-src');
+                targetFrame.dataset.loaded = '1';
             }
 
             setTimeout(() => {
