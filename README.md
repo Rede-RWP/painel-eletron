@@ -18,7 +18,8 @@ Sistemas atuais:
 
 | Arquivo | Função |
 |---------|--------|
-| `main.js` | Processo principal do Electron: janela, kiosk, bypass de `X-Frame-Options` / CSP para os sites abrirem em iframe |
+| `main.js` | Processo principal do Electron: janela, kiosk, cookies de terceiros para iframes |
+| `frame-policy.js` | Bypass de `X-Frame-Options` / CSP (`*.cardapioweb.com`, iFood, RWP) |
 | `painel.html` | Interface: iframes das páginas + botões do dock. **É aqui que se adiciona página nova** |
 | `preload.js` | Isolamento de segurança (não precisa alterar no uso normal) |
 | `package.json` | Nome, **versão**, scripts de start/build, lista de arquivos empacotados |
@@ -59,6 +60,9 @@ npm run start:kiosk
 
 # Forçar janela (também no Linux)
 npm run start:windowed
+
+# Testes de força / regressão (Python, ~30 casos)
+npm test
 ```
 
 No Mac o kiosk cobre a tela inteira e a segunda vez que você dá `npm start` a janela nova fecha na hora (só pode haver um app aberto). Por isso o desenvolvimento no Mac usa janela.
@@ -144,8 +148,11 @@ O build só empacota o que está em `package.json` → `build.files`:
 ```json
 "files": [
   "main.js",
+  "frame-policy.js",
+  "updater.js",
   "preload.js",
   "painel.html",
+  "config.json",
   "package.json"
 ]
 ```
@@ -402,4 +409,5 @@ sudo apt-get install -f -y
 | Loja não atualiza sozinha | Conferir se já é 1.1.0+; se o repo/Release é público; se a tag `v*` é maior que a versão local |
 | Overlay de erro no sudo | O helper/`sudoers` só entra no `.deb` desta versão; reinstale o 1.1.0 uma vez |
 | GitHub 404 | Repo privado ou ainda não existe Release; o app falha quieto e tenta em 4 h |
-| Linux trava / congela o SO | Atualize para 1.1.2+ (descarrega iframes inativos). Evite abrir as 4 abas sem trocar. PDV com ≤4 GB RAM: use só as abas necessárias |
+| Linux trava / congela o SO | Atualize para 1.1.5+ (descarrega iFood/Gestão/RWP inativos; Cardápio mantém sessão). PDV com ≤4 GB RAM: use só as abas necessárias |
+| Cardápio Web em branco | 1.1.5+ bypassa `*.cardapioweb.com` e libera storage de terceiros no iframe. Confirme que `frame-policy.js` está no pacote |

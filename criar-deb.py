@@ -12,11 +12,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "dist" / "linux-unpacked"
-OUT = ROOT / "dist" / "ppf-painel-multitask_1.1.2_amd64.deb"
+OUT = ROOT / "dist" / "ppf-painel-multitask_1.1.5_amd64.deb"
 STAGE = ROOT / "dist" / "deb-stage-py"
 
 PKG = "ppf-painel-multitask"
-VERSION = "1.1.2"
+VERSION = "1.1.5"
 ARCH = "amd64"
 
 

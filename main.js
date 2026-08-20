@@ -1,6 +1,7 @@
 const { app, BrowserWindow, session, Menu, screen, ipcMain } = require('electron');
 const path = require('path');
 const { startAutoUpdate } = require('./updater');
+const { hostNeedsFrameBypass, stripFrameHeaders } = require('./frame-policy');
 
 // Kiosk/tela cheia: nas lojas (Linux) é o padrão.
 // No Mac (desenvolvimento) abre em janela.
@@ -25,24 +26,11 @@ if (process.platform === 'linux') {
   }
 }
 
-const FRAME_HOSTS = [
-  'portal.cardapioweb.com',
-  'gestordepedidos.ifood.com.br',
-  'portal.ifood.com.br',
-  'www.rederwp.com',
-  'rederwp.com',
-];
+// Cardápio Web / Firebase auth dentro de iframe (pai file://) precisa de storage
+// de terceiros — sem isso o portal pode ficar em branco após login/redirect.
+app.commandLine.appendSwitch('disable-features', 'ThirdPartyStoragePartitioning');
 
-function hostNeedsFrameBypass(url) {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return FRAME_HOSTS.some((h) => host === h.replace(/^www\./, '') || host.endsWith('.' + h));
-  } catch (_) {
-    return false;
-  }
-}
-
-/** Remove headers que impedem sites embutidos — só nos domínios do painel. */
+/** Remove X-Frame-Options / frame-ancestors nos iframes dos sites parceiros. */
 function attachFrameBypass() {
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['https://*/*', 'http://*/*'] },
@@ -58,32 +46,7 @@ function attachFrameBypass() {
         callback({ responseHeaders: details.responseHeaders });
         return;
       }
-
-      const headers = { ...details.responseHeaders };
-      for (const key of Object.keys(headers)) {
-        const lower = key.toLowerCase();
-        if (lower === 'x-frame-options') {
-          delete headers[key];
-          continue;
-        }
-        if (
-          lower === 'content-security-policy' ||
-          lower === 'content-security-policy-report-only'
-        ) {
-          headers[key] = headers[key].map((value) =>
-            String(value)
-              .replace(/frame-ancestors[^;]*;?/gi, '')
-              .replace(/;\s*;/g, ';')
-              .replace(/^\s*;\s*/g, '')
-              .replace(/;\s*$/g, '')
-              .trim()
-          );
-          if (!headers[key].some((v) => v.length > 0)) {
-            delete headers[key];
-          }
-        }
-      }
-      callback({ responseHeaders: headers });
+      callback({ responseHeaders: stripFrameHeaders(details.responseHeaders) });
     }
   );
 }

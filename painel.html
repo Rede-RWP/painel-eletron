@@ -302,13 +302,17 @@
     <script>
         let activePageId = 'home';
 
-        /** Descarrega iframes inativos — cada SPA = processo Chromium separado. */
+        /** Abas que mantêm sessão (login). As outras descarregam para aliviar RAM no PDV. */
+        const KEEP_SESSION = new Set(['cardweb']);
+
+        /** Descarrega iframes inativos — exceto Cardápio Web (sessão/login). */
         function unloadInactiveIframes(activeId) {
             document.querySelectorAll('iframe.page-frame').forEach((frame) => {
                 const pageId = frame.id.replace('iframe-', '');
-                if (pageId === activeId) return;
-                if (frame.src && frame.src !== 'about:blank') {
+                if (pageId === activeId || KEEP_SESSION.has(pageId)) return;
+                if (frame.dataset.loaded === '1') {
                     frame.src = 'about:blank';
+                    frame.dataset.loaded = '0';
                 }
             });
         }
@@ -325,14 +329,18 @@
                 ? document.getElementById('home')
                 : document.getElementById('iframe-' + id);
 
+            if (!targetFrame) return;
+
             targetFrame.classList.add('active');
             btn.classList.add('active');
             activePageId = id;
 
-            if (id !== 'home') {
+            // data-src + dataset.loaded: getAttribute('src') / .src mentem após about:blank.
+            if (id !== 'home' && targetFrame.dataset.loaded !== '1') {
                 const url = targetFrame.getAttribute('data-src');
-                if (url && (!targetFrame.src || targetFrame.src === 'about:blank')) {
+                if (url) {
                     targetFrame.src = url;
+                    targetFrame.dataset.loaded = '1';
                 }
             }
 
