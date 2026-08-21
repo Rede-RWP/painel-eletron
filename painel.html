@@ -9,6 +9,7 @@
     <style>
         :root {
             --dock-bg: #1c2430;
+            --shelf-bg: #0b0f14;
             --btn-inicio: #4a5568;
             --btn-cardapio: #9b2ef0;
             --btn-ifood: #e84a5f;
@@ -16,6 +17,7 @@
             --btn-rwp: #4f46c8;
             --dock-pad: 10px;
             --dock-h: 64px;
+            --dock-shelf: 96px;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,19 +27,21 @@
             width: 100vw;
             overflow: hidden;
             font-family: 'Outfit', sans-serif;
-            background: #0b0f14;
+            background: var(--shelf-bg);
         }
 
         .app {
             position: relative;
             width: 100%;
             height: 100%;
+            background: var(--shelf-bg);
         }
 
         .main-container {
             position: absolute;
             inset: 0;
-            background: #f4f5f7;
+            /* Escuro: a faixa sob o BrowserView (reserva do dock) não pode ficar clara */
+            background: var(--shelf-bg);
         }
 
         .page-frame {
@@ -67,7 +71,12 @@
                 radial-gradient(ellipse 80% 50% at 50% 0%, #e8ecf4 0%, transparent 55%),
                 linear-gradient(180deg, #f7f8fa 0%, #e9edf3 100%);
             color: #1a2332;
-            padding-bottom: calc(var(--dock-h) + 48px);
+            padding-bottom: 24px;
+            transition: padding-bottom 0.25s ease;
+        }
+
+        body.dock-open #home-screen {
+            padding-bottom: calc(var(--dock-shelf) + 8px);
         }
 
         #home-screen h1 {
@@ -83,12 +92,34 @@
             color: #5a6578;
         }
 
-        /* Dock v2 — barra flutuante inferior */
+        /* Faixa só quando o menu está aberto */
+        .dock-shelf {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: var(--dock-shelf);
+            z-index: 90;
+            background: var(--shelf-bg);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(100%);
+            transition:
+                opacity 0.22s ease,
+                transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        body.dock-open .dock-shelf {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Dock auto-hide — aparece ao aproximar o mouse da borda inferior */
         .dock {
             position: absolute;
             left: 50%;
-            bottom: 22px;
-            transform: translateX(-50%);
+            bottom: 14px;
             z-index: 100;
             display: flex;
             align-items: center;
@@ -101,18 +132,18 @@
                 0 12px 40px rgba(0, 0, 0, 0.35),
                 0 2px 8px rgba(0, 0, 0, 0.2),
                 inset 0 1px 0 rgba(255, 255, 255, 0.06);
-            animation: dock-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(-50%) translateY(120%);
+            transition:
+                opacity 0.22s ease,
+                transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        @keyframes dock-in {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(24px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
+        body.dock-open .dock {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
         }
 
         .nav-btn {
@@ -161,12 +192,15 @@
                 left: 12px;
                 right: 12px;
                 width: auto;
-                transform: none;
+                transform: translateY(120%);
                 justify-content: space-between;
                 gap: 6px;
                 padding: 8px;
                 border-radius: 28px;
-                animation: none;
+            }
+
+            body.dock-open .dock {
+                transform: translateY(0);
             }
 
             .nav-btn {
@@ -270,6 +304,7 @@
             <button type="button" onclick="showPage('gestao', this)" class="nav-btn btn-gestao">Gestão</button>
             <button type="button" onclick="showPage('rwp', this)" class="nav-btn btn-rwp">RWP</button>
         </nav>
+        <div class="dock-shelf" aria-hidden="true"></div>
 
         <div id="update-overlay" aria-live="polite">
             <div class="update-card" id="update-card">
@@ -296,6 +331,13 @@
                 window.painelNav.showPage(id).catch(() => {});
             }
         }
+
+        (function setupDockAutoHide() {
+            if (!window.painelNav || !window.painelNav.onDockVisibility) return;
+            window.painelNav.onDockVisibility((payload) => {
+                document.body.classList.toggle('dock-open', !!(payload && payload.open));
+            });
+        })();
 
         (function setupUpdates() {
             const overlay = document.getElementById('update-overlay');

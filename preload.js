@@ -10,4 +10,7 @@ contextBridge.exposeInMainWorld('painelUpdates', {
 contextBridge.exposeInMainWorld('painelNav', {
   showPage: (id) => ipcRenderer.invoke('nav-show-page', id),
   setOverlay: (visible) => ipcRenderer.invoke('nav-set-overlay', visible),
+  onDockVisibility: (callback) => {
+    ipcRenderer.on('dock-visibility', (_event, payload) => callback(payload));
+  },
 });

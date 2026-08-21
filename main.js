@@ -6,7 +6,7 @@ const {
   stripFrameHeaders,
   isAllowedPopupUrl,
 } = require('./frame-policy');
-const { DOCK_RESERVE, PAGES } = require('./pages-config');
+const { DOCK_RESERVE, DOCK_EDGE_PX, DOCK_HIDE_DELAY_MS, DOCK_POLL_MS, PAGES } = require('./pages-config');
 
 // Kiosk/tela cheia: nas lojas (Linux) é o padrão.
 // No Mac (desenvolvimento) abre em janela.
@@ -72,6 +72,9 @@ function primaryBounds() {
 let mainWindow = null;
 let activePageId = 'home';
 let overlayVisible = false;
+let dockOpen = false;
+let dockHideTimer = null;
+let dockPollTimer = null;
 const views = new Map();
 let lastKioskEnforce = 0;
 let kioskStartupRetries = 0;
@@ -116,12 +119,81 @@ function scheduleKioskStartup(win) {
 
 function contentBounds(win) {
   const [width, height] = win.getContentSize();
+  const reserve = dockOpen ? DOCK_RESERVE : 0;
   return {
     x: 0,
     y: 0,
     width,
-    height: Math.max(240, height - DOCK_RESERVE),
+    height: Math.max(240, height - reserve),
   };
+}
+
+function setDockOpen(open) {
+  const next = !!open;
+  if (dockOpen === next) {
+    if (next) layoutActiveView();
+    return;
+  }
+  dockOpen = next;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('dock-visibility', { open: dockOpen });
+  }
+  layoutActiveView();
+}
+
+function scheduleDockHide() {
+  if (!dockOpen || dockHideTimer) return;
+  dockHideTimer = setTimeout(() => {
+    dockHideTimer = null;
+    setDockOpen(false);
+  }, DOCK_HIDE_DELAY_MS);
+}
+
+function cancelDockHide() {
+  if (dockHideTimer) {
+    clearTimeout(dockHideTimer);
+    dockHideTimer = null;
+  }
+}
+
+/** Poll do cursor: BrowserView cobre a janela e o HTML não recebe mousemove na borda. */
+function startDockAutoHide() {
+  if (dockPollTimer) return;
+  dockPollTimer = setInterval(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (overlayVisible) {
+      cancelDockHide();
+      setDockOpen(false);
+      return;
+    }
+
+    const point = screen.getCursorScreenPoint();
+    const bounds = mainWindow.getContentBounds();
+    const inX = point.x >= bounds.x && point.x < bounds.x + bounds.width;
+    const inY = point.y >= bounds.y && point.y < bounds.y + bounds.height;
+    if (!inX || !inY) {
+      scheduleDockHide();
+      return;
+    }
+
+    const fromBottom = bounds.y + bounds.height - point.y;
+    // Aberto: mantém enquanto o mouse está na faixa do dock; fechado: só a borda.
+    const zone = dockOpen ? DOCK_RESERVE + 12 : DOCK_EDGE_PX;
+    if (fromBottom <= zone) {
+      cancelDockHide();
+      setDockOpen(true);
+    } else {
+      scheduleDockHide();
+    }
+  }, DOCK_POLL_MS);
+}
+
+function stopDockAutoHide() {
+  if (dockPollTimer) {
+    clearInterval(dockPollTimer);
+    dockPollTimer = null;
+  }
+  cancelDockHide();
 }
 
 function attachGuestHandlers(wc) {
@@ -271,7 +343,7 @@ function createWindow() {
     height: b.height || 768,
     minWidth: 1024,
     minHeight: 600,
-    backgroundColor: '#000000',
+    backgroundColor: '#0b0f14',
     show: false,
     autoHideMenuBar: true,
     fullscreen: wantKiosk,
@@ -304,6 +376,7 @@ function createWindow() {
     enforceKiosk(win, { force: true });
     win.show();
     scheduleKioskStartup(win);
+    startDockAutoHide();
   });
 
   const relayout = () => layoutActiveView();
@@ -325,6 +398,7 @@ function createWindow() {
   });
 
   win.on('closed', () => {
+    stopDockAutoHide();
     for (const id of [...views.keys()]) {
       destroyView(id);
     }

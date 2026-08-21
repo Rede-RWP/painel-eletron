@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.1.6"
+EXPECTED_VERSION = "1.1.8"
 FRAME_SUFFIXES = (
     "cardapioweb.com",
     "ifood.com.br",
@@ -135,7 +135,7 @@ class TestVersionSync(unittest.TestCase):
     def test_05_no_stale_old_versions_in_release_files(self):
         for name in ("package.json", "criar-deb.py", "criar-deb.sh"):
             text = read(ROOT / name)
-            self.assertNotRegex(text, r"\b1\.1\.[25]\b", f"{name} versão antiga")
+            self.assertNotRegex(text, r"\b1\.1\.[2567]\b", f"{name} versão antiga")
 
 
 class TestArchitectureBrowserView(unittest.TestCase):
@@ -166,16 +166,27 @@ class TestArchitectureBrowserView(unittest.TestCase):
         self.assertIn("painelNav", text)
         self.assertIn("showPage", text)
         self.assertIn("setOverlay", text)
+        self.assertIn("onDockVisibility", text)
 
     def test_11_cardweb_keep_alive(self):
         text = read(ROOT / "pages-config.js")
         self.assertIn("portal.cardapioweb.com", text)
         self.assertIn("keepAlive: true", text)
+        self.assertIn("DOCK_EDGE_PX", text)
 
     def test_12_recaptcha_domains_in_policy(self):
         text = read(ROOT / "frame-policy.js")
         for d in ("google.com", "gstatic.com", "recaptcha.net", "isAllowedPopupUrl"):
             self.assertIn(d, text)
+
+    def test_12b_dock_autohide_wired(self):
+        main = read(ROOT / "main.js")
+        html = read(ROOT / "painel.html")
+        self.assertIn("startDockAutoHide", main)
+        self.assertIn("dock-visibility", main)
+        self.assertIn("getCursorScreenPoint", main)
+        self.assertIn("dock-open", html)
+        self.assertIn("onDockVisibility", html)
 
 
 class TestHostBypassLogic(unittest.TestCase):
