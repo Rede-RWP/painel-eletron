@@ -6,11 +6,17 @@ const {
   stripFrameHeaders,
   isAllowedPopupUrl,
 } = require('./frame-policy');
-const { DOCK_RESERVE, DOCK_EDGE_PX, DOCK_HIDE_DELAY_MS, DOCK_POLL_MS, PAGES } = require('./pages-config');
+const {
+  DOCK_HEIGHT,
+  DOCK_EDGE_PX,
+  DOCK_HIDE_DELAY_MS,
+  DOCK_POLL_MS,
+  DOCK_ANIM_MS,
+  PAGES,
+} = require('./pages-config');
 
 // Kiosk/tela cheia: nas lojas (Linux) é o padrão.
 // No Mac (desenvolvimento) abre em janela.
-// Forçar kiosk: --kiosk ou PPF_PAINEL_KIOSK=1. Desligar: --no-kiosk ou PPF_PAINEL_KIOSK=0.
 const wantKiosk = (() => {
   if (process.argv.includes('--no-kiosk') || process.env.PPF_PAINEL_KIOSK === '0') {
     return false;
@@ -30,7 +36,6 @@ if (process.platform === 'linux') {
   }
 }
 
-// Storage de terceiros (Firebase) + reCAPTCHA em guest views.
 app.commandLine.appendSwitch('disable-features', 'ThirdPartyStoragePartitioning');
 
 function chromeUserAgent() {
@@ -44,7 +49,6 @@ function chromeUserAgent() {
   return `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${ver} Safari/537.36`;
 }
 
-/** Remove X-Frame-Options / frame-ancestors (sites + challenge do captcha). */
 function attachFrameBypass() {
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['https://*/*', 'http://*/*'] },
@@ -70,11 +74,13 @@ function primaryBounds() {
 }
 
 let mainWindow = null;
+let dockWindow = null;
 let activePageId = 'home';
 let overlayVisible = false;
 let dockOpen = false;
 let dockHideTimer = null;
 let dockPollTimer = null;
+let dockHideAnimTimer = null;
 const views = new Map();
 let lastKioskEnforce = 0;
 let kioskStartupRetries = 0;
@@ -119,26 +125,66 @@ function scheduleKioskStartup(win) {
 
 function contentBounds(win) {
   const [width, height] = win.getContentSize();
-  const reserve = dockOpen ? DOCK_RESERVE : 0;
-  return {
-    x: 0,
-    y: 0,
-    width,
-    height: Math.max(240, height - reserve),
-  };
+  return { x: 0, y: 0, width, height };
+}
+
+function broadcastActivePage(id) {
+  const payload = { id };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('active-page', payload);
+  }
+  if (dockWindow && !dockWindow.isDestroyed()) {
+    dockWindow.webContents.send('active-page', payload);
+  }
+}
+
+function layoutDockWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (!dockWindow || dockWindow.isDestroyed()) return;
+  const b = mainWindow.getContentBounds();
+  const height = DOCK_HEIGHT;
+  dockWindow.setBounds({
+    x: Math.round(b.x),
+    y: Math.round(b.y + b.height - height),
+    width: Math.round(b.width),
+    height,
+  });
 }
 
 function setDockOpen(open) {
   const next = !!open;
-  if (dockOpen === next) {
-    if (next) layoutActiveView();
+  if (dockOpen === next) return;
+  dockOpen = next;
+
+  if (!dockWindow || dockWindow.isDestroyed()) return;
+
+  if (dockHideAnimTimer) {
+    clearTimeout(dockHideAnimTimer);
+    dockHideAnimTimer = null;
+  }
+
+  if (dockOpen) {
+    layoutDockWindow();
+    dockWindow.webContents.send('dock-visibility', {
+      open: true,
+      activePage: activePageId,
+    });
+    if (!dockWindow.isVisible()) {
+      dockWindow.showInactive();
+    }
     return;
   }
-  dockOpen = next;
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('dock-visibility', { open: dockOpen });
-  }
-  layoutActiveView();
+
+  dockWindow.webContents.send('dock-visibility', {
+    open: false,
+    activePage: activePageId,
+  });
+  dockHideAnimTimer = setTimeout(() => {
+    dockHideAnimTimer = null;
+    if (!dockOpen && dockWindow && !dockWindow.isDestroyed()) {
+      dockWindow.hide();
+    }
+  }, DOCK_ANIM_MS);
 }
 
 function scheduleDockHide() {
@@ -156,7 +202,6 @@ function cancelDockHide() {
   }
 }
 
-/** Poll do cursor: BrowserView cobre a janela e o HTML não recebe mousemove na borda. */
 function startDockAutoHide() {
   if (dockPollTimer) return;
   dockPollTimer = setInterval(() => {
@@ -177,8 +222,7 @@ function startDockAutoHide() {
     }
 
     const fromBottom = bounds.y + bounds.height - point.y;
-    // Aberto: mantém enquanto o mouse está na faixa do dock; fechado: só a borda.
-    const zone = dockOpen ? DOCK_RESERVE + 12 : DOCK_EDGE_PX;
+    const zone = dockOpen ? DOCK_HEIGHT + 8 : DOCK_EDGE_PX;
     if (fromBottom <= zone) {
       cancelDockHide();
       setDockOpen(true);
@@ -194,6 +238,10 @@ function stopDockAutoHide() {
     dockPollTimer = null;
   }
   cancelDockHide();
+  if (dockHideAnimTimer) {
+    clearTimeout(dockHideAnimTimer);
+    dockHideAnimTimer = null;
+  }
 }
 
 function attachGuestHandlers(wc) {
@@ -224,9 +272,7 @@ function attachGuestHandlers(wc) {
       child.setMenuBarVisibility(false);
       child.webContents.setUserAgent(chromeUserAgent());
       child.webContents.setWindowOpenHandler(({ url }) =>
-        isAllowedPopupUrl(url)
-          ? { action: 'allow' }
-          : { action: 'deny' }
+        isAllowedPopupUrl(url) ? { action: 'allow' } : { action: 'deny' }
       );
     } catch (_) {
       // ignore
@@ -299,10 +345,10 @@ function showPage(id) {
 
   const prev = activePageId;
   activePageId = id;
+  broadcastActivePage(id);
 
   hideAllViews();
 
-  // Libera RAM: descarrega abas sem keepAlive ao sair.
   if (prev !== 'home' && prev !== id && PAGES[prev] && !PAGES[prev].keepAlive) {
     destroyView(prev);
   }
@@ -327,10 +373,48 @@ function showPage(id) {
 function setOverlayVisible(visible) {
   overlayVisible = !!visible;
   if (overlayVisible) {
+    cancelDockHide();
+    setDockOpen(false);
     hideAllViews();
   } else if (activePageId !== 'home') {
     showPage(activePageId);
   }
+}
+
+function createDockWindow(parent) {
+  const dock = new BrowserWindow({
+    parent,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    show: false,
+    focusable: true,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      backgroundThrottling: false,
+    },
+  });
+
+  dock.setMenuBarVisibility(false);
+  dock.loadFile(path.join(__dirname, 'dock.html'));
+  dock.setIgnoreMouseEvents(false);
+
+  dock.on('closed', () => {
+    if (dockWindow === dock) dockWindow = null;
+  });
+
+  return dock;
 }
 
 function createWindow() {
@@ -368,19 +452,27 @@ function createWindow() {
   win.webContents.setUserAgent(chromeUserAgent());
   attachGuestHandlers(win.webContents);
 
+  dockWindow = createDockWindow(win);
+
   win.webContents.once('did-finish-load', () => {
     startAutoUpdate(win);
+    broadcastActivePage(activePageId);
   });
 
   win.once('ready-to-show', () => {
     enforceKiosk(win, { force: true });
     win.show();
     scheduleKioskStartup(win);
+    layoutDockWindow();
     startDockAutoHide();
   });
 
-  const relayout = () => layoutActiveView();
+  const relayout = () => {
+    layoutActiveView();
+    layoutDockWindow();
+  };
   win.on('resize', relayout);
+  win.on('move', layoutDockWindow);
   win.on('maximize', relayout);
   win.on('unmaximize', relayout);
   win.on('enter-full-screen', relayout);
@@ -399,6 +491,9 @@ function createWindow() {
 
   win.on('closed', () => {
     stopDockAutoHide();
+    if (dockWindow && !dockWindow.isDestroyed()) {
+      dockWindow.close();
+    }
     for (const id of [...views.keys()]) {
       destroyView(id);
     }

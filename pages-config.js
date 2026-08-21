@@ -1,12 +1,14 @@
-/** Páginas externas do painel (carregadas em BrowserView — top-level, reCAPTCHA ok). */
-/** Altura do dock quando aberto — deve bater com --dock-shelf no painel.html */
-const DOCK_RESERVE = 96;
+/** Páginas externas do painel (BrowserView top-level). */
+/** Altura da janela overlay do dock (transparente — não empurra o conteúdo). */
+const DOCK_HEIGHT = 108;
 /** Distância da borda inferior (px) que abre o menu só com o mouse */
-const DOCK_EDGE_PX = 14;
+const DOCK_EDGE_PX = 16;
 /** Delay para esconder depois que o mouse sai da zona do dock */
-const DOCK_HIDE_DELAY_MS = 450;
-/** Intervalo do poll do cursor (BrowserView come os eventos do renderer) */
+const DOCK_HIDE_DELAY_MS = 480;
+/** Intervalo do poll do cursor */
 const DOCK_POLL_MS = 40;
+/** Duração da animação de saída antes do hide() da janela */
+const DOCK_ANIM_MS = 320;
 
 const PAGES = {
   cardweb: {
@@ -28,9 +30,10 @@ const PAGES = {
 };
 
 module.exports = {
-  DOCK_RESERVE,
+  DOCK_HEIGHT,
   DOCK_EDGE_PX,
   DOCK_HIDE_DELAY_MS,
   DOCK_POLL_MS,
+  DOCK_ANIM_MS,
   PAGES,
 };

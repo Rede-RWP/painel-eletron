@@ -13,4 +13,7 @@ contextBridge.exposeInMainWorld('painelNav', {
   onDockVisibility: (callback) => {
     ipcRenderer.on('dock-visibility', (_event, payload) => callback(payload));
   },
+  onActivePage: (callback) => {
+    ipcRenderer.on('active-page', (_event, payload) => callback(payload));
+  },
 });

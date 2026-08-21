@@ -7,19 +7,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --dock-bg: #1c2430;
-            --shelf-bg: #0b0f14;
-            --btn-inicio: #4a5568;
-            --btn-cardapio: #9b2ef0;
-            --btn-ifood: #e84a5f;
-            --btn-gestao: #2eb8e6;
-            --btn-rwp: #4f46c8;
-            --dock-pad: 10px;
-            --dock-h: 64px;
-            --dock-shelf: 96px;
-        }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body, html {
@@ -27,30 +14,25 @@
             width: 100vw;
             overflow: hidden;
             font-family: 'Outfit', sans-serif;
-            background: var(--shelf-bg);
+            background: #0b0f14;
         }
 
         .app {
             position: relative;
             width: 100%;
             height: 100%;
-            background: var(--shelf-bg);
+            background: #0b0f14;
         }
 
         .main-container {
             position: absolute;
             inset: 0;
-            /* Escuro: a faixa sob o BrowserView (reserva do dock) não pode ficar clara */
-            background: var(--shelf-bg);
+            background: #0b0f14;
         }
 
         .page-frame {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
+            inset: 0;
             display: none;
             z-index: 1;
         }
@@ -71,12 +53,7 @@
                 radial-gradient(ellipse 80% 50% at 50% 0%, #e8ecf4 0%, transparent 55%),
                 linear-gradient(180deg, #f7f8fa 0%, #e9edf3 100%);
             color: #1a2332;
-            padding-bottom: 24px;
-            transition: padding-bottom 0.25s ease;
-        }
-
-        body.dock-open #home-screen {
-            padding-bottom: calc(var(--dock-shelf) + 8px);
+            padding: 24px;
         }
 
         #home-screen h1 {
@@ -92,132 +69,20 @@
             color: #5a6578;
         }
 
-        /* Faixa só quando o menu está aberto */
-        .dock-shelf {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            height: var(--dock-shelf);
-            z-index: 90;
-            background: var(--shelf-bg);
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-            pointer-events: none;
-            opacity: 0;
-            transform: translateY(100%);
-            transition:
-                opacity 0.22s ease,
-                transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        body.dock-open .dock-shelf {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* Dock auto-hide — aparece ao aproximar o mouse da borda inferior */
-        .dock {
-            position: absolute;
-            left: 50%;
-            bottom: 14px;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: var(--dock-pad);
-            min-height: var(--dock-h);
-            background: var(--dock-bg);
-            border-radius: 999px;
-            box-shadow:
-                0 12px 40px rgba(0, 0, 0, 0.35),
-                0 2px 8px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.06);
-            opacity: 0;
-            pointer-events: none;
-            transform: translateX(-50%) translateY(120%);
-            transition:
-                opacity 0.22s ease,
-                transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        body.dock-open .dock {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .nav-btn {
-            appearance: none;
-            border: 2px solid transparent;
-            cursor: pointer;
-            color: #fff;
-            font-family: inherit;
-            font-weight: 700;
-            font-size: clamp(0.7rem, 1.1vw, 0.85rem);
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            padding: 14px 22px;
-            min-width: 96px;
-            border-radius: 999px;
-            background: var(--btn-inicio);
-            transition:
-                transform 0.18s ease,
-                box-shadow 0.18s ease,
-                border-color 0.18s ease,
-                filter 0.18s ease;
-            white-space: nowrap;
-        }
-
-        .btn-cardweb { background: var(--btn-cardapio); }
-        .btn-ifood { background: var(--btn-ifood); }
-        .btn-gestao { background: var(--btn-gestao); }
-        .btn-rwp { background: var(--btn-rwp); }
-
-        .nav-btn:hover {
-            transform: translateY(-2px) scale(1.03);
-            filter: brightness(1.08);
-        }
-
-        .nav-btn:active {
-            transform: scale(0.97);
-        }
-
-        .nav-btn.active {
-            border-color: #fff;
-            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35), 0 4px 16px rgba(0, 0, 0, 0.25);
-        }
-
-        @media (max-width: 720px) {
-            .dock {
-                left: 12px;
-                right: 12px;
-                width: auto;
-                transform: translateY(120%);
-                justify-content: space-between;
-                gap: 6px;
-                padding: 8px;
-                border-radius: 28px;
-            }
-
-            body.dock-open .dock {
-                transform: translateY(0);
-            }
-
-            .nav-btn {
-                flex: 1;
-                min-width: 0;
-                padding: 12px 6px;
-                font-size: 0.65rem;
-                letter-spacing: 0.02em;
-            }
-        }
-
         .home-version {
             margin-top: 8px;
             font-size: 0.8rem;
             font-weight: 500;
             color: #8a93a3;
             letter-spacing: 0.04em;
+        }
+
+        .home-hint {
+            margin-top: 28px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #9aa3b0;
+            letter-spacing: 0.02em;
         }
 
         #update-overlay {
@@ -292,19 +157,10 @@
                     <h1>SISTEMA PIZZA PIZZA FRANQUIAS</h1>
                     <p>Selecione um sistema no menu</p>
                     <p class="home-version" id="app-version"></p>
+                    <p class="home-hint">Passe o mouse na borda inferior para abrir o menu</p>
                 </div>
             </div>
-            <!-- Sites externos rodam em BrowserView (main.js) — reCAPTCHA do CW precisa de top-level -->
         </main>
-
-        <nav class="dock" aria-label="Navegação principal">
-            <button type="button" onclick="showPage('home', this)" class="nav-btn active">Início</button>
-            <button type="button" onclick="showPage('cardweb', this)" class="nav-btn btn-cardweb">Cardápio</button>
-            <button type="button" onclick="showPage('ifood', this)" class="nav-btn btn-ifood">iFood</button>
-            <button type="button" onclick="showPage('gestao', this)" class="nav-btn btn-gestao">Gestão</button>
-            <button type="button" onclick="showPage('rwp', this)" class="nav-btn btn-rwp">RWP</button>
-        </nav>
-        <div class="dock-shelf" aria-hidden="true"></div>
 
         <div id="update-overlay" aria-live="polite">
             <div class="update-card" id="update-card">
@@ -317,25 +173,12 @@
     </div>
 
     <script>
-        let activePageId = 'home';
-
-        function showPage(id, btn) {
-            if (id === activePageId) return;
-
-            document.getElementById('home').classList.toggle('active', id === 'home');
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activePageId = id;
-
-            if (window.painelNav && window.painelNav.showPage) {
-                window.painelNav.showPage(id).catch(() => {});
-            }
-        }
-
-        (function setupDockAutoHide() {
-            if (!window.painelNav || !window.painelNav.onDockVisibility) return;
-            window.painelNav.onDockVisibility((payload) => {
-                document.body.classList.toggle('dock-open', !!(payload && payload.open));
+        (function setupHomeActive() {
+            if (!window.painelNav || !window.painelNav.onActivePage) return;
+            window.painelNav.onActivePage((payload) => {
+                const home = document.getElementById('home');
+                if (!home || !payload) return;
+                home.classList.toggle('active', payload.id === 'home');
             });
         })();
 

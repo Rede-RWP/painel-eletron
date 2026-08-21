@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.1.8"
+EXPECTED_VERSION = "1.1.9"
 FRAME_SUFFIXES = (
     "cardapioweb.com",
     "ifood.com.br",
@@ -135,12 +135,13 @@ class TestVersionSync(unittest.TestCase):
     def test_05_no_stale_old_versions_in_release_files(self):
         for name in ("package.json", "criar-deb.py", "criar-deb.sh"):
             text = read(ROOT / name)
-            self.assertNotRegex(text, r"\b1\.1\.[2567]\b", f"{name} versão antiga")
+            self.assertNotRegex(text, r"\b1\.1\.[25678]\b", f"{name} versão antiga")
 
 
 class TestArchitectureBrowserView(unittest.TestCase):
     def test_06_pages_config_exists(self):
         self.assertTrue((ROOT / "pages-config.js").is_file())
+        self.assertTrue((ROOT / "dock.html").is_file())
 
     def test_07_main_uses_browserview(self):
         text = read(ROOT / "main.js")
@@ -148,18 +149,20 @@ class TestArchitectureBrowserView(unittest.TestCase):
         self.assertIn("setWindowOpenHandler", text)
         self.assertIn("chromeUserAgent", text)
         self.assertIn("nav-show-page", text)
+        self.assertIn("createDockWindow", text)
+        self.assertIn("transparent: true", text)
 
     def test_08_package_files_includes_pages_config(self):
         data = json.loads(read(ROOT / "package.json"))
         files = data["build"]["files"]
         self.assertIn("pages-config.js", files)
         self.assertIn("frame-policy.js", files)
+        self.assertIn("dock.html", files)
 
     def test_09_painel_has_no_iframes(self):
         html = read(ROOT / "painel.html")
         self.assertNotIn("<iframe", html)
-        self.assertIn("painelNav", html)
-        self.assertIn("BrowserView", html)
+        self.assertNotIn('class="dock"', html)
 
     def test_10_preload_exposes_nav(self):
         text = read(ROOT / "preload.js")
@@ -167,11 +170,13 @@ class TestArchitectureBrowserView(unittest.TestCase):
         self.assertIn("showPage", text)
         self.assertIn("setOverlay", text)
         self.assertIn("onDockVisibility", text)
+        self.assertIn("onActivePage", text)
 
     def test_11_cardweb_keep_alive(self):
         text = read(ROOT / "pages-config.js")
         self.assertIn("portal.cardapioweb.com", text)
         self.assertIn("keepAlive: true", text)
+        self.assertIn("DOCK_HEIGHT", text)
         self.assertIn("DOCK_EDGE_PX", text)
 
     def test_12_recaptcha_domains_in_policy(self):
@@ -179,14 +184,17 @@ class TestArchitectureBrowserView(unittest.TestCase):
         for d in ("google.com", "gstatic.com", "recaptcha.net", "isAllowedPopupUrl"):
             self.assertIn(d, text)
 
-    def test_12b_dock_autohide_wired(self):
+    def test_12b_dock_overlay_wired(self):
         main = read(ROOT / "main.js")
-        html = read(ROOT / "painel.html")
+        dock = read(ROOT / "dock.html")
         self.assertIn("startDockAutoHide", main)
         self.assertIn("dock-visibility", main)
         self.assertIn("getCursorScreenPoint", main)
-        self.assertIn("dock-open", html)
-        self.assertIn("onDockVisibility", html)
+        self.assertIn("layoutDockWindow", main)
+        self.assertNotIn("DOCK_RESERVE", main)
+        self.assertIn("backdrop-filter", dock)
+        self.assertIn("background: transparent", dock)
+        self.assertIn("dock-open", dock)
 
 
 class TestHostBypassLogic(unittest.TestCase):
@@ -227,13 +235,14 @@ class TestHostBypassLogic(unittest.TestCase):
 
 class TestPainelHtml(unittest.TestCase):
     def test_18_dock_buttons(self):
-        html = read(ROOT / "painel.html")
+        html = read(ROOT / "dock.html")
         for page_id in ("home", "cardweb", "ifood", "gestao", "rwp"):
-            self.assertIn(f"showPage('{page_id}'", html)
+            self.assertIn(f'data-page="{page_id}"', html)
 
     def test_19_overlay_hides_views(self):
-        html = read(ROOT / "painel.html")
-        self.assertIn("setOverlay", html)
+        main = read(ROOT / "main.js")
+        self.assertIn("setOverlayVisible", main)
+        self.assertIn("setDockOpen(false)", main)
 
 
 class TestStressForce(unittest.TestCase):
@@ -352,6 +361,7 @@ class TestReleaseIntegrity(unittest.TestCase):
             "frame-policy.js",
             "pages-config.js",
             "painel.html",
+            "dock.html",
             "preload.js",
             "updater.js",
             "config.json",

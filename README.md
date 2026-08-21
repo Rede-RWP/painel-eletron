@@ -19,7 +19,7 @@ Sistemas atuais:
 | Arquivo | Função |
 |---------|--------|
 | `main.js` | Processo principal: janela, kiosk, **BrowserView** das abas (Cardápio top-level p/ reCAPTCHA) |
-| `pages-config.js` | URLs das abas + `keepAlive` (Cardápio mantém sessão) |
+| `dock.html` | Menu flutuante em janela transparente (overlay glass, auto-hide) |
 | `frame-policy.js` | Bypass de `X-Frame-Options` / CSP + allowlist de popups do captcha |
 | `painel.html` | Dock + tela Início. Sites externos **não** usam iframe (vão em BrowserView) |
 | `preload.js` | Isolamento de segurança (não precisa alterar no uso normal) |
@@ -104,10 +104,10 @@ rappi: {
 },
 ```
 
-### Passo 3 — Botão no dock (`painel.html`)
+### Passo 3 — Botão no dock (`dock.html`)
 
 ```html
-<button type="button" onclick="showPage('rappi', this)" class="nav-btn btn-rappi">Rappi</button>
+<button type="button" data-page="rappi" class="nav-btn btn-rappi">Rappi</button>
 ```
 
 ### Passo 4 — Conferir
@@ -130,6 +130,7 @@ O build só empacota o que está em `package.json` → `build.files`:
   "updater.js",
   "preload.js",
   "painel.html",
+  "dock.html",
   "config.json",
   "package.json"
 ]
@@ -377,7 +378,8 @@ sudo apt-get install -f -y
 | Problema | O que fazer |
 |----------|-------------|
 | Página em branco / captcha some | Atualize para **1.1.6+** (BrowserView top-level + popups Google). Não use iframe no Cardápio |
-| Menu some / não aparece | Passe o mouse na **borda inferior** da tela (~14px). O dock é auto-hide desde a 1.1.8 |
+| Menu some / não aparece | Passe o mouse na **borda inferior** (~16px). Dock overlay glass desde a 1.1.9 |
+| Faixa preta / tela sobe | 1.1.9+ não reserva mais espaço: o menu **sobrepõe** com fundo transparente |
 | `.deb` minúsculo no Mac | Ignorar o `.deb` do builder; usar `criar-deb.py` |
 | `Não achei dist/linux-unpacked/ppf-painel` | Rodar `npm run dist:linux` antes do Python |
 | Kiosk não cobre a tela no KDE | Manter o launcher padrão (X11); não forçar Wayland |
@@ -387,4 +389,4 @@ sudo apt-get install -f -y
 | Overlay de erro no sudo | O helper/`sudoers` só entra no `.deb` desta versão; reinstale o 1.1.0 uma vez |
 | GitHub 404 | Repo privado ou ainda não existe Release; o app falha quieto e tenta em 4 h |
 | Linux trava / congela o SO | 1.1.6+ descarrega iFood/Gestão/RWP ao sair; Cardápio mantém sessão. PDV com ≤4 GB: abra só o necessário |
-| Dock some atrás do site | Ajuste `DOCK_RESERVE` em `pages-config.js` (altura reservada na base) |
+| Dock some atrás do site | O menu é janela overlay (`dock.html`); confirme `transparent: true` e que `dock.html` está no pacote |
