@@ -3,6 +3,7 @@ const path = require('path');
 const { startAutoUpdate } = require('./updater');
 const {
   hostNeedsFrameBypass,
+  hostNeedsExtensionCsp,
   stripFrameHeaders,
   isAllowedPopupUrl,
 } = require('./frame-policy');
@@ -64,7 +65,11 @@ function attachFrameBypass() {
         callback({ responseHeaders: details.responseHeaders });
         return;
       }
-      callback({ responseHeaders: stripFrameHeaders(details.responseHeaders) });
+      callback({
+        responseHeaders: stripFrameHeaders(details.responseHeaders, {
+          allowExtension: hostNeedsExtensionCsp(details.url),
+        }),
+      });
     }
   );
 }

@@ -30,15 +30,17 @@
    "version": "2.2.75",
    "web_accessible_resources": [ {
       "matches": [ "https://web.whatsapp.com/*" ],
-      "resources": [ "*.html" ]
-   }, {
-      "matches": [ "https://web.whatsapp.com/*" ],
-      "resources": [ "static/js/helperScript.js" ]
-   }, {
-      "matches": [ "https://web.whatsapp.com/*" ],
-      "resources": [ "/logo192.png" ]
-   }, {
-      "matches": [ "https://web.whatsapp.com/*" ],
-      "resources": [ "/alert-audio.mp3" ]
+      "resources": [
+         "*.html",
+         "static/*",
+         "static/js/*",
+         "static/css/*",
+         "static/media/*",
+         "logo192.png",
+         "/logo192.png",
+         "alert-audio.mp3",
+         "/alert-audio.mp3",
+         "favicon.ico"
+      ]
    } ]
 }

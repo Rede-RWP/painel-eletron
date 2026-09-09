@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.2.0"
+EXPECTED_VERSION = "1.2.1"
 FRAME_SUFFIXES = (
     "cardapioweb.com",
     "ifood.com.br",
@@ -142,7 +142,7 @@ class TestVersionSync(unittest.TestCase):
     def test_05_no_stale_old_versions_in_release_files(self):
         for name in ("package.json", "criar-deb.py", "criar-deb.sh"):
             text = read(ROOT / name)
-            self.assertNotRegex(text, r"\b1\.1\.[256789]\b", f"{name} versão antiga")
+            self.assertNotRegex(text, r"\b1\.1\.[256789]\b|\b1\.2\.0\b", f"{name} versão antiga")
 
 
 class TestArchitectureBrowserView(unittest.TestCase):
@@ -193,7 +193,17 @@ class TestArchitectureBrowserView(unittest.TestCase):
 
     def test_12_recaptcha_domains_in_policy(self):
         text = read(ROOT / "frame-policy.js")
-        for d in ("google.com", "gstatic.com", "recaptcha.net", "isAllowedPopupUrl", "whatsapp.com"):
+        for d in (
+            "google.com",
+            "gstatic.com",
+            "recaptcha.net",
+            "isAllowedPopupUrl",
+            "whatsapp.com",
+            "allowChromeExtensionInCsp",
+            "hostNeedsExtensionCsp",
+            "chrome-extension:",
+            "cross-origin-embedder-policy",
+        ):
             self.assertIn(d, text)
 
     def test_12b_dock_overlay_wired(self):
@@ -204,6 +214,8 @@ class TestArchitectureBrowserView(unittest.TestCase):
         self.assertIn("getCursorScreenPoint", main)
         self.assertIn("layoutDockWindow", main)
         self.assertNotIn("DOCK_RESERVE", main)
+        self.assertIn("hostNeedsExtensionCsp", main)
+        self.assertIn("allowExtension", main)
         self.assertIn("backdrop-filter", dock)
         self.assertIn("background: transparent", dock)
         self.assertIn("dock-open", dock)
