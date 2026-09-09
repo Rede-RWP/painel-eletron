@@ -1,0 +1,44 @@
+{
+   "action": {
+      "default_icon": {
+         "128": "logo192.png",
+         "16": "logo192.png",
+         "48": "logo192.png"
+      }
+   },
+   "background": {
+      "service_worker": "background.js"
+   },
+   "content_scripts": [ {
+      "all_frames": true,
+      "css": [ "styles.css" ],
+      "js": [ "static/js/content.js" ],
+      "matches": [ "https://web.whatsapp.com/*" ]
+   } ],
+   "description": "Gerencie os pedidos do seu negócio direto dentro do WhatsApp Web e tenha um bot sempre à disposição para responder os clientes.",
+   "host_permissions": [ "https://engine.tunagateway.com/*", "https://storage.googleapis.com/*", "https://messaging.cardapioweb.com/*", "https://messaging.sandbox.cardapioweb.com/*" ],
+   "icons": {
+      "128": "logo192.png",
+      "16": "logo192.png",
+      "48": "logo192.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Vu1S32wUuYHmNyXROFo+qsyK4MldkUCwqQT0inhQ4DYU0C3Egb7QwIpk2gTGVC+c0W/v8nTLiOfKGJD7V/vjwAooOoheeriexsm91jpmF4UQeM72Wv+YzpWt56jPAHwawkG/YVVITDsEeemQh1G7/et146o2/jO9Jw5y1jRIYDdNTp7eN4PUIgq7bm0JYxcm+PzalB4qbjrjipvbkUGvBXeAnq9ak9HtY0QxfzHJYMigH5P+JHCbRSgBV2KUKRzPp5v8tLumT5oVAtrPugaDyIoo2S8bgGfiU+xXznvRn97HNWHxWZ/iEM4rZ7aC6aBAvqdnb34ORoE5GDy0SMNZwIDAQAB",
+   "manifest_version": 3,
+   "name": "Cardapinho",
+   "permissions": [ "storage" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "2.2.75",
+   "web_accessible_resources": [ {
+      "matches": [ "https://web.whatsapp.com/*" ],
+      "resources": [ "*.html" ]
+   }, {
+      "matches": [ "https://web.whatsapp.com/*" ],
+      "resources": [ "static/js/helperScript.js" ]
+   }, {
+      "matches": [ "https://web.whatsapp.com/*" ],
+      "resources": [ "/logo192.png" ]
+   }, {
+      "matches": [ "https://web.whatsapp.com/*" ],
+      "resources": [ "/alert-audio.mp3" ]
+   } ]
+}

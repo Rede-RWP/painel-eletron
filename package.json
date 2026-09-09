@@ -1,7 +1,7 @@
 {
   "name": "ppf-painel-multitask",
   "version": "1.1.9",
-  "description": "Painel multitask PPF (Cardápio Web, iFood, Gestão, RWP) em tela cheia/kiosk no Linux",
+  "description": "Painel multitask PPF (Cardápio Web, iFood, Gestão, RWP, WhatsApp) em tela cheia/kiosk no Linux",
   "homepage": "https://www.rederwp.com",
   "main": "main.js",
   "author": "Pizza Pizza Franquias <ti@pizzapizza.com.br>",
@@ -37,7 +37,11 @@
       "painel.html",
       "dock.html",
       "config.json",
-      "package.json"
+      "package.json",
+      "extensions/**/*"
+    ],
+    "asarUnpack": [
+      "extensions/**/*"
     ],
     "linux": {
       "target": [
@@ -48,7 +52,7 @@
       "executableName": "ppf-painel",
       "maintainer": "Pizza Pizza Franquias <ti@pizzapizza.com.br>",
       "synopsis": "Painel multitask para lojas PPF",
-      "description": "Abre Cardápio Web, iFood, Gestão e RWP em um único painel kiosk."
+      "description": "Abre Cardápio Web, iFood, Gestão, RWP e WhatsApp Web em um único painel kiosk."
     },
     "deb": {
       "depends": []

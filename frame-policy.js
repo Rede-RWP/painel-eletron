@@ -1,8 +1,11 @@
-/** Domínios embutidos / popups do painel (CW, iFood, RWP + Google reCAPTCHA). */
+/** Domínios embutidos / popups do painel (CW, iFood, RWP, WhatsApp + Google reCAPTCHA). */
 const FRAME_SUFFIXES = [
   'cardapioweb.com',
   'ifood.com.br',
   'rederwp.com',
+  'whatsapp.com',
+  'whatsapp.net',
+  'tunagateway.com',
   'google.com',
   'gstatic.com',
   'recaptcha.net',
@@ -66,6 +69,10 @@ function isAllowedPopupUrl(url) {
       'cardapioweb.com',
       'ifood.com.br',
       'rederwp.com',
+      'whatsapp.com',
+      'whatsapp.net',
+      'tunagateway.com',
+      'facebook.com',
     ];
     return allow.some((s) => host === s || host.endsWith('.' + s));
   } catch (_) {

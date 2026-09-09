@@ -28,6 +28,9 @@ FRAME_SUFFIXES = (
     "cardapioweb.com",
     "ifood.com.br",
     "rederwp.com",
+    "whatsapp.com",
+    "whatsapp.net",
+    "tunagateway.com",
     "google.com",
     "gstatic.com",
     "recaptcha.net",
@@ -64,6 +67,10 @@ def is_allowed_popup_url(url: str) -> bool:
             "cardapioweb.com",
             "ifood.com.br",
             "rederwp.com",
+            "whatsapp.com",
+            "whatsapp.net",
+            "tunagateway.com",
+            "facebook.com",
         )
         return any(host == s or host.endswith("." + s) for s in allow)
     except Exception:
@@ -151,6 +158,8 @@ class TestArchitectureBrowserView(unittest.TestCase):
         self.assertIn("nav-show-page", text)
         self.assertIn("createDockWindow", text)
         self.assertIn("transparent: true", text)
+        self.assertIn("loadCardapinhoExtension", text)
+        self.assertIn("extensions", text)
 
     def test_08_package_files_includes_pages_config(self):
         data = json.loads(read(ROOT / "package.json"))
@@ -158,6 +167,8 @@ class TestArchitectureBrowserView(unittest.TestCase):
         self.assertIn("pages-config.js", files)
         self.assertIn("frame-policy.js", files)
         self.assertIn("dock.html", files)
+        self.assertIn("extensions/**/*", files)
+        self.assertIn("extensions/**/*", data["build"]["asarUnpack"])
 
     def test_09_painel_has_no_iframes(self):
         html = read(ROOT / "painel.html")
@@ -175,13 +186,14 @@ class TestArchitectureBrowserView(unittest.TestCase):
     def test_11_cardweb_keep_alive(self):
         text = read(ROOT / "pages-config.js")
         self.assertIn("portal.cardapioweb.com", text)
+        self.assertIn("web.whatsapp.com", text)
         self.assertIn("keepAlive: true", text)
         self.assertIn("DOCK_HEIGHT", text)
         self.assertIn("DOCK_EDGE_PX", text)
 
     def test_12_recaptcha_domains_in_policy(self):
         text = read(ROOT / "frame-policy.js")
-        for d in ("google.com", "gstatic.com", "recaptcha.net", "isAllowedPopupUrl"):
+        for d in ("google.com", "gstatic.com", "recaptcha.net", "isAllowedPopupUrl", "whatsapp.com"):
             self.assertIn(d, text)
 
     def test_12b_dock_overlay_wired(self):
@@ -217,6 +229,7 @@ class TestHostBypassLogic(unittest.TestCase):
     def test_15_popup_allowlist(self):
         self.assertTrue(is_allowed_popup_url("about:blank"))
         self.assertTrue(is_allowed_popup_url("https://www.google.com/recaptcha/challenge"))
+        self.assertTrue(is_allowed_popup_url("https://web.whatsapp.com/"))
         self.assertFalse(is_allowed_popup_url("https://evil.example/phish"))
 
     def test_16_rejects_unrelated(self):
@@ -236,7 +249,7 @@ class TestHostBypassLogic(unittest.TestCase):
 class TestPainelHtml(unittest.TestCase):
     def test_18_dock_buttons(self):
         html = read(ROOT / "dock.html")
-        for page_id in ("home", "cardweb", "ifood", "gestao", "rwp"):
+        for page_id in ("home", "cardweb", "ifood", "gestao", "rwp", "whatsapp"):
             self.assertIn(f'data-page="{page_id}"', html)
 
     def test_19_overlay_hides_views(self):
@@ -293,11 +306,12 @@ class TestStressForce(unittest.TestCase):
 
     def test_24_pages_config_parse(self):
         text = read(ROOT / "pages-config.js")
-        for key in ("cardweb", "ifood", "gestao", "rwp"):
+        for key in ("cardweb", "ifood", "gestao", "rwp", "whatsapp"):
             self.assertIn(key, text)
         urls = re.findall(r"url:\s*'(https://[^']+)'", text)
-        self.assertEqual(len(urls), 4)
+        self.assertEqual(len(urls), 5)
         self.assertTrue(any("cardapioweb.com" in u for u in urls))
+        self.assertTrue(any("web.whatsapp.com" in u for u in urls))
 
     def test_25_fuzz_suffix_boundary(self):
         for url in (
@@ -368,6 +382,7 @@ class TestReleaseIntegrity(unittest.TestCase):
             "package.json",
             "criar-deb.py",
             "criar-deb.sh",
+            "extensions/cardapinho/manifest.json",
         ):
             self.assertTrue((ROOT / name).is_file(), name)
 

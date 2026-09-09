@@ -1,0 +1,116 @@
+/* The switch - the box around the slider */
+.cw-switch {
+  background-color: gray;
+  border-radius: 50%;
+  transition: all 0.2s;
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+}
+
+/* Hide default HTML checkbox */
+.cw-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.cw-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e4e4e7;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+}
+
+.cw-slider:before {
+  position: absolute;
+  content: "";
+  height: 1.25rem;
+  width: 1.25rem;
+  left: 2px;
+  top: 2px;
+  background-color: white;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+}
+
+input:checked + .cw-slider {
+  background-color: #00a783;
+}
+
+input:focus + .cw-slider {
+  box-shadow: 0 0 1px #00a783;
+}
+
+input:checked + .cw-slider:before {
+  -webkit-transform: translateX(100%);
+  -ms-transform: translateX(100%);
+  transform: translateX(100%);
+}
+
+/* Rounded sliders */
+.cw-slider.cw-round {
+  border-radius: 999px;
+}
+
+.cw-slider.cw-round:before {
+  border-radius: 50%;
+}
+
+.cw-switch-wrapper {
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  background-color: white;
+  padding: 6px 8px 6px 12px;
+  border-radius: 6px;
+  border-width: 1px;
+  border-color: #d4d4d8;
+  border-style: solid;
+}
+
+.cw-switch-label {
+  margin-right: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+}
+
+.cw-warning-color {
+  color: #fb923c;
+}
+
+.cw-warning-button {
+  display: inline-flex;
+  padding: 2px;
+  background-color: #fb923c;
+  text-align: center;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.cw-warning-button:hover {
+  opacity: 75%;
+}
+
+.cw-chat-tag {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 100%;
+  margin-right: 6px;
+}
+
+.chat-waiting {
+  background-color: #fb923c;
+}
+
+.chat-paused {
+  background-color: #60a5fa;
+}

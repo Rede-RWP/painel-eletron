@@ -27,6 +27,10 @@ const PAGES = {
     url: 'https://www.rederwp.com/src/login.php',
     keepAlive: false,
   },
+  whatsapp: {
+    url: 'https://web.whatsapp.com/',
+    keepAlive: true,
+  },
 };
 
 module.exports = {

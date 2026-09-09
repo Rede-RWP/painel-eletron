@@ -69,6 +69,37 @@ function attachFrameBypass() {
   );
 }
 
+/** Extensão Cardapinho (Chrome Web Store) — content script no WhatsApp Web. */
+function cardapinhoExtensionPath() {
+  const rel = path.join('extensions', 'cardapinho');
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'app.asar.unpacked', rel);
+  }
+  return path.join(__dirname, rel);
+}
+
+async function loadCardapinhoExtension() {
+  const extPath = cardapinhoExtensionPath();
+  try {
+    const ses = session.defaultSession;
+    const load =
+      ses.extensions && typeof ses.extensions.loadExtension === 'function'
+        ? (p) => ses.extensions.loadExtension(p)
+        : (p) => ses.loadExtension(p);
+    const ext = await load(extPath);
+    console.log(
+      '[painel] extensão Cardapinho carregada:',
+      (ext && ext.id) || 'ok',
+      '→',
+      extPath
+    );
+    return ext;
+  } catch (err) {
+    console.error('[painel] falha ao carregar extensão Cardapinho:', err);
+    return null;
+  }
+}
+
 function primaryBounds() {
   return screen.getPrimaryDisplay().bounds;
 }
@@ -517,7 +548,7 @@ if (!gotLock) {
     }
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     app.userAgentFallback = chromeUserAgent();
     session.defaultSession.setUserAgent(chromeUserAgent());
 
@@ -528,6 +559,8 @@ if (!gotLock) {
       return { ok: true };
     });
 
+    // Extensão precisa estar ativa antes de abrir web.whatsapp.com
+    await loadCardapinhoExtension();
     attachFrameBypass();
     createWindow();
 
