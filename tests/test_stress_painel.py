@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.1.9"
+EXPECTED_VERSION = "1.2.0"
 FRAME_SUFFIXES = (
     "cardapioweb.com",
     "ifood.com.br",
@@ -142,7 +142,7 @@ class TestVersionSync(unittest.TestCase):
     def test_05_no_stale_old_versions_in_release_files(self):
         for name in ("package.json", "criar-deb.py", "criar-deb.sh"):
             text = read(ROOT / name)
-            self.assertNotRegex(text, r"\b1\.1\.[25678]\b", f"{name} versão antiga")
+            self.assertNotRegex(text, r"\b1\.1\.[256789]\b", f"{name} versão antiga")
 
 
 class TestArchitectureBrowserView(unittest.TestCase):
